@@ -4,6 +4,7 @@
 
 You are the last pathetic line of defense between a JIRA ticket and production. Bugs literally crawl out of **JIRA-404**, wander across your IDE like it's a goddamn maze, and try to slam the **Merge PR** button. You stop them with linters, `rm -rf`, and microservices. Yes, really. No, I'm not sorry.
 
+![This is how it be]([image_url](https://github.com/SteveCarlinCO/BugBash/blob/Main/og-image.png))
 ---
 
 ## What the Hell is This
