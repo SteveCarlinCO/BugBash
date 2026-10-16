@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Social sharing. TODO: set og:url and absolute og:image URLs when this is deployed. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bug Bash! — Tower Defense">
+<meta property="og:description" content="A tower defense game for everyone who sat through sprint planning and thought: 'this, but with more violence.' Stop the bugs before they hit Merge PR.">
+<meta property="og:image" content="bug-bash-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bug Bash! — Tower Defense">
+<meta name="twitter:description" content="A tower defense game for everyone who sat through sprint planning and thought: 'this, but with more violence.' Stop the bugs before they hit Merge PR.">
+<meta name="twitter:image" content="bug-bash-og.png">
+<title>Bug Bash! v159 — Bug Defense</title>
+<style>
+  :root{
+    --bg:#050505; --fg:#00ff66; --muted:#1a4d2e;
+    --a1:#33ff88; --a2:#00ffcc; --a3:#ccff00; --err:#ff0055; --a1rgb:51,255,136;
+    --panel:var(--panel); --panel2:var(--panel2); --line:var(--line); --body:var(--body);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--body); font-family:'Segoe UI',system-ui,sans-serif;
+         display:flex; flex-direction:column; align-items:center; padding:12px; }
+  #topbar { display:flex; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--line);
+         border-radius:8px; padding:5px 12px; margin-bottom:6px; font-size:12px; flex-wrap:wrap; justify-content:center; }
+  #topbar b { color:var(--a1); }
+  #logo { font-size:15px; font-weight:bold; letter-spacing:2px; color:var(--a1); text-shadow:0 0 8px var(--a1);
+          cursor:pointer; user-select:none; -webkit-user-select:none; }
+  #topbar .spacer { flex:1 1 auto; min-width:6px; }
+  #topbar .cbtn { padding:4px 10px; font-size:12px; }
+  #shop { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:6px; max-width:1000px; }
+  .tbtn { background:var(--panel); border:2px solid var(--line); color:var(--body); border-radius:8px;
+          padding:4px 9px; cursor:pointer; font-size:11px; text-align:center; line-height:1.4; }
+  .tbtn .desc { display:block; font-size:9px; color:var(--line); }
+  .tbtn:hover { border-color:var(--a1); }
+  .tbtn.sel { border-color:var(--a1); background:var(--panel2); }
+  .tbtn .cost { color:var(--body); font-weight:bold; }
+  .tbtn:disabled { opacity:.4; cursor:default; }
+  .tbtn .kbd{ display:inline-block; border:1px solid var(--line); border-radius:3px; padding:0 5px;
+    margin-right:6px; font-size:10px; color:var(--muted); }
+  .tbtn .dicon{ display:inline-block; margin-right:5px; font-size:13px; vertical-align:-1px; }
+  .cbtn { background:var(--panel); border:2px solid var(--line); color:var(--body); border-radius:8px;
+          padding:8px 16px; cursor:pointer; font-size:14px; font-weight:bold; }
+  .cbtn:hover { border-color:var(--a1); }
+  .cbtn.on { background:var(--panel2); border-color:var(--a1); }
+  .cbtn:disabled { opacity:.4; cursor:default; }
+  #bAuto:not(.on):not(:disabled) { opacity:.6; }
+  #bWave { position:relative; overflow:hidden; user-select:none; -webkit-user-select:none; touch-action:none; }
+  #bWave .holdfill { position:absolute; inset:0; width:0; background:rgba(var(--a1rgb),.35); pointer-events:none; }
+  #bWave.holding .holdfill { width:100%; transition:width .6s linear; }
+  #bWaveLabel { position:relative; }
+  #bWave.autoarmed { border-color:var(--a1); color:var(--a3); animation:autopulse 1.2s ease-in-out infinite; }
+  @keyframes autopulse { 0%,100%{ box-shadow:0 0 0 rgba(var(--a1rgb),0);} 50%{ box-shadow:0 0 14px rgba(var(--a1rgb),.85);} }
+  #gamewrap { position:relative; overflow:hidden; }
+  #blockTip{ position:absolute; display:none; background:#0b0f0b; border:1px solid var(--a1); border-radius:6px;
+    padding:8px 10px; font:11px/1.5 monospace; color:var(--body); pointer-events:none; z-index:30;
+    max-width:230px; box-shadow:0 4px 16px rgba(0,0,0,.6); }
+  #blockTip b{ color:var(--a1); letter-spacing:1px; }
+  #blockTip .bc{ color:var(--muted); font-size:10px; }
+  #blockTip i{ color:var(--muted); }
+  #bountyDrawer { position:absolute; top:0; right:0; bottom:0; width:272px; z-index:5;
+                  background:var(--panel); border-left:1px solid var(--a1); box-shadow:-6px 0 24px rgba(0,0,0,.6);
+                  transform:translateX(105%); transition:transform .25s ease; padding:12px; overflow-y:auto;
+                  font-size:12px; }
+  #bountyDrawer.open { transform:none; }
+  .bd-head { display:flex; justify-content:space-between; align-items:center; color:var(--a3);
+             letter-spacing:2px; font-size:11px; border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:10px; }
+  .bd-x { cursor:pointer; color:var(--muted); font-size:16px; padding:0 4px; }
+  .bd-x:hover { color:var(--err); }
+  .bd-empty { color:var(--muted); }
+  .bcard { border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:10px; background:var(--panel); }
+  .bcard.done { border-color:var(--a1); }
+  .bcard-top { display:flex; justify-content:space-between; gap:8px; color:var(--body); margin-bottom:6px; }
+  .bcard-top .pts { color:#cc8d00; font-weight:bold; flex:none; }
+  .bcard .bar { height:8px; background:var(--panel2); border-radius:4px; overflow:hidden; }
+  .bcard .bar i { display:block; height:100%; background:var(--a1); border-radius:4px; transition:width .3s; }
+  .bcard.done .bar i { background:var(--a3); }
+  .bcard-sub { color:var(--muted); font-size:11px; margin-top:6px; }
+  .bcard.done .bcard-sub { color:var(--a3); }
+  .bd-hist-title { color:var(--muted); letter-spacing:2px; font-size:11px; margin:12px 0 6px; }
+  .bd-hist { color:var(--muted); font-size:11px; margin-bottom:4px; }
+  .bd-hist .ok { color:var(--a1); }
+  #topbar { position:relative; }
+  #waveTip { position:absolute; z-index:20; background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:8px 12px; font:11px/1.7 monospace; color:var(--body); pointer-events:none; white-space:nowrap;
+    box-shadow:0 4px 16px rgba(0,0,0,.7); }
+  #waveTip.hidden { display:none; }
+  #statTip { position:absolute; z-index:20; background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:8px 12px; font:11px/1.6 monospace; color:var(--body); pointer-events:none; max-width:230px;
+    box-shadow:0 4px 16px rgba(0,0,0,.7); }
+  #statTip.hidden { display:none; }
+  #topbar .stat { cursor:help; }
+  #waveTip b { color:var(--a3); }
+  #waveTip .foechip { display:inline-block; background:var(--panel); border:1px solid; border-radius:3px;
+    font:bold 10px monospace; padding:1px 5px; margin-right:2px; }
+  canvas { border:3px solid var(--line); border-radius:6px; cursor:crosshair; background:var(--panel); }
+  #overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             background:rgba(0,10,0,.87); border-radius:6px; z-index:10; text-align:center; padding:20px; }
+  #overlay.hidden { display:none; }
+  .termwin{ background:var(--panel); border:1px solid var(--line); border-radius:8px; width:min(680px,92%); text-align:left; box-shadow:0 0 40px rgba(0,0,0,.8); }
+  .termbar{ display:flex; align-items:center; gap:8px; background:var(--panel2); padding:8px 12px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--line); }
+  .tdot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .tpath{ color:var(--muted); font:12px monospace; margin-left:4px; }
+  .tascii{ color:var(--err); font:bold 15px/1 monospace; margin:18px 20px 6px; }
+  .tout{ color:var(--body); font:13px monospace; margin:0 20px 10px; line-height:1.6; }
+  .tepi{ color:var(--muted); font:italic 12px monospace; margin:0 20px 16px; }
+  .termwin .cbtn{ margin:0 20px 20px; }
+  .termcmd{ font:14px monospace; color:var(--body); background:transparent; border:1px solid var(--a1); border-radius:4px; padding:10px 18px; cursor:pointer; margin:0 20px 20px; }
+  .termcmd:hover{ background:var(--a1); color:var(--bg); }
+  #helpOverlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.72); border-radius:6px; z-index:30; padding:18px; }
+  #helpOverlay.hidden{ display:none; }
+  .helpwin{ background:var(--panel); border:1px solid var(--line); border-radius:8px; width:min(720px,94%);
+    max-height:92%; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(0,0,0,.8); }
+  .helpbar{ display:flex; align-items:center; justify-content:space-between; background:var(--panel2);
+    padding:10px 14px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--line);
+    font:13px monospace; color:var(--a1); }
+  #helpClose{ cursor:pointer; font-size:20px; color:var(--muted); line-height:1; }
+  #helpClose:hover{ color:var(--err); }
+  .helpbody{ overflow-y:auto; padding:18px 24px 26px; font:13px/1.65 monospace; color:var(--body); text-align:left; }
+  .helpbody h1{ font-size:21px; color:var(--a1); margin:0 0 4px; }
+  .helpbody h1 .hsub{ font-size:13px; color:var(--muted); font-weight:normal; }
+  .helpbody h2{ font-size:15px; color:var(--a1); margin:20px 0 6px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .helpbody p{ margin:0 0 10px; }
+  .helpbody ul,.helpbody ol{ margin:0 0 10px 20px; padding:0; }
+  .helpbody li{ margin-bottom:4px; }
+  .helpbody code{ color:var(--a3); background:rgba(0,0,0,.25); padding:1px 5px; border-radius:3px; }
+  .helpbody table{ border-collapse:collapse; margin:0 0 12px; width:100%; }
+  .helpbody th,.helpbody td{ border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+  .helpbody th{ color:var(--a1); }
+  .hlede{ color:var(--muted); font-style:italic; }
+  .hfoot{ color:var(--muted); font-style:italic; border-top:1px solid var(--line); padding-top:12px; margin-top:16px; }
+  .termcmd:hover .prompt{ color:var(--bg); }
+  .termcmd .cursor{ animation:tblink 1s steps(1) infinite; }
+  @keyframes tblink{ 50%{ opacity:0; } }
+  .termwin .ts{ color:var(--muted); }
+  #overlay h2 { color:var(--a1); text-shadow:0 0 12px var(--a1); font-size:32px; letter-spacing:4px; margin-bottom:10px; }
+  #overlay p { max-width:560px; font-size:14px; color:var(--body); margin-bottom:14px; line-height:1.5; }
+  #selpanel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 14px;
+              margin-top:8px; font-size:13px; min-height:44px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; justify-content:center;}
+  #selpanel .cbtn { font-size:12px; padding:5px 12px; }
+  #tip { font-size:11px; color:var(--line); margin-top:6px; max-width:980px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span id="logo" title="Click: next theme · Alt+click / right-click: dark/light">&#128027; Bug Bash!</span>
+  <span class="stat">&#128737; uptime <b id="hLives">100.00%</b></span>
+  <span class="stat"><svg width="12" height="16" viewBox="0 0 12 16" style="vertical-align:-3px"><rect x="0.5" y="0.5" width="11" height="15" rx="2" fill="#f4f4f4" stroke="#8a8a8a"/><text x="2.2" y="6.4" font-size="5" font-family="monospace" font-weight="bold" fill="#b03030">A</text><text x="2.2" y="12.6" font-size="6.5" fill="#222222">♠</text></svg> <b id="hMoney">250</b> SP</span>
+  <span class="stat">&#128121; <b id="hFoes">0</b></span>
+  <span class="stat">&#128128; <b id="hKills">0</b></span>
+  <span class="spacer"></span>
+  <button class="cbtn" id="bWave" disabled title="Hold 0.6s to toggle auto-send"><span class="holdfill"></span><span id="bWaveLabel">&#9654; Start Sprint 1</span></button>
+  <button class="cbtn" id="bSpeed" disabled>1x</button>
+  <button class="cbtn" id="bAuto" disabled title="Auto-build">&#129302;</button>
+  <button class="cbtn" id="bPause" disabled>&#10074;&#10074;</button>
+  <button class="cbtn" id="bRestart" disabled>&#8635;</button>
+  <button class="cbtn" id="bMute" disabled title="sound">&#128263;</button>
+  <button class="cbtn" id="bBounty" disabled title="Bounty board">&#127919;<span id="bBountyN"></span></button>
+  <div id="waveTip" class="hidden"></div>
+  <div id="statTip" class="hidden"></div>
+</div>
+<div id="shop"></div>
+<div id="gamewrap">
+  <div id="blockTip"></div>
+  <canvas id="cv" width="980" height="620"></canvas>
+  <div id="bountyDrawer"></div>
+  <div id="helpOverlay" class="hidden">
+    <div class="helpwin">
+      <div class="helpbar"><span>BUG BASH! &mdash; Help</span><span id="helpClose" title="close">&#10005;</span></div>
+      <div class="helpbody">
+<h1>BUG BASH! <span class="hsub">— Help File (allegedly)</span></h1>
+<p class="hlede">A tower defense game for every poor bastard who sat through sprint planning and thought: "this, but with a lot more violence."</p>
+<p>You are the last pathetic line of defense between a JIRA ticket and production. Bugs literally crawl out of <b>JIRA-404</b>, wander across your IDE like it's a goddamn maze, and try to slam the <b>Merge PR</b> button. You stop them with linters, <code>rm -rf</code>, and microservices. Yes, really. No, I'm not sorry.</p>
+
+<h2>What the Hell is This</h2>
+<p>Bug Bash! is a maze tower defense game lazily reskinned as a VS Code IDE having a totally shit day. There is no fixed path — every defender you plop down acts as a wall. The bugs reroute around your maze in real time. If you try to completely seal the route, the game flat-out refuses to place the tower and silently judges your stupid ass.</p>
+
+<h2>How to Run This Shit</h2>
+<ol>
+<li>Open it in a browser.</li>
+<li>That's it. That's the entire fucking install process.</li>
+</ol>
+<p>There is zero build step. There is no <code>package.json</code>. There is no backend — it's "serverless" in the sense that there is no fucking server, and somehow even less than that. Your pathetic excuse for a database is <code>localStorage</code> dragging around <code>_v1</code> suffixes and doing a lot of hopeful, heavy lifting.</p>
+
+<h2>Versioning</h2>
+<p><code>git</code> is just a fucking rumor here. The changelog is whatever is rattling around in the memory file. The release process is literally "attach the new file and pray to the old gods you didn't make a mistake."</p>
+<p>The in-game release branch (<code>release/v1.0 → prod</code>, sitting under the Merge PR button) increments every 5 sprints. This means the fake, make-believe project inside the game has better release discipline than this actual piece-of-shit project.</p>
+
+<h2>Production's Sleep Paralysis Demons</h2>
+<p><b>Invaders</b> (the bugs, obviously):</p>
+<ul>
+<li><code><b>404</b></code> — Not found. Ever. Even when it's right in front of your face.</li>
+<li><code><b>NaN</b></code> — Not a number, not a bug, not a fucking thing. <code>NaN !== NaN</code> and neither does this useless trash.</li>
+<li><code><b>WARN</b></code> — "Technically" not an error. Technically.</li>
+<li><code><b>500</b></code> — The server is fine. Just kidding, the server is on fucking fire.</li>
+<li><code><b>HEISENBUG</b></code> — Flies right over your stupid walls. Observing it actually changes its position. Good fucking luck.</li>
+<li><code><b>RACE COND</b></code> — Teleports 1–3 cells every few seconds. The docs call it "eventual consistency." The docs are lying to you.</li>
+<li><code><b>KERNEL PANIC</b></code> — The big boss. Triggers a massive PagerDuty banner for the entire sprint, because of fucking course it does.</li>
+</ul>
+<p><b>Defenders</b> (your arsenal, ranked cheapest first, just like your real-world tooling budget):</p>
+<ul>
+<li><code><b>Linter</b></code> — Bitches about the bugs' formatting until they literally die of shame.</li>
+<li><code><b>rm -rf</b></code> — Deletes the bug. And probably your entire filesystem. Collateral damage is a feature.</li>
+<li><code><b>Try/Catch</b></code> — Catches bugs. Occasionally. The <code>finally</code> block is where all your hope goes to die.</li>
+<li><code><b>Breakpoint</b></code> — Freezes those fuckers mid-execution. It has a red dot. Feels powerful. Is powerful.</li>
+<li><code><b>Microservices</b></code> — One defender that deals fan-out chain damage. It's distributed, meaning when it inevitably shits the bed, you'll have no clue which part to blame.</li>
+</ul>
+<p><b>Currency:</b> Story points. Obviously. You earn them by killing bugs, marking the absolute first time in history story points have corresponded to actual fucking work.</p>
+
+<h2>Controls (Don't Fuck These Up)</h2>
+<table>
+<tr><th>Input</th><th>Action</th></tr>
+<tr><td>Click a defender, click the board</td><td>Build a wall that shoots.</td></tr>
+<tr><td><code>1</code>–<code>5</code></td><td>Select a defender using badges on the buttons, like a real IDE.</td></tr>
+<tr><td><code>U</code> / <code>S</code></td><td>Upgrade or sell the selected defender.</td></tr>
+<tr><td><code>Esc</code></td><td>Disarm placement, essentially disarming your own bullshit temper during a retro.</td></tr>
+<tr><td>Click sprint button</td><td>Start the sprint, or call it early for +2 story points per remaining bug, because scope creep literally pays.</td></tr>
+<tr><td>Hold sprint button 0.6s</td><td>Toggle auto-send. The 300–600ms gap is a dead zone, much like the middle of every planning meeting you've ever attended.</td></tr>
+<tr><td>🤖</td><td>Auto-build: the game plays its damn self. This is the dream. This is the <i>whole</i> dream.</td></tr>
+<tr><td>Logo click</td><td>Cycle through 8 themes. Alt+click or right-click toggles dark/light mode. Choosing a color scheme is the real endgame, and light themes are for absolute suckers.</td></tr>
+</table>
+
+<h2>Features (An incomplete list, just like your last sprint)</h2>
+<ul>
+<li><b>12 sprints + endless mode</b>, because the fucking backlog never dies and neither does this game.</li>
+<li><b>Maze routing</b> — Bugs repath dynamically around your walls. Try to seal the route out and the game vetoes your dumb ass.</li>
+<li><b>Uptime SLA</b> — You get 20 lives, starting at 100.00%, losing 5% per escaped bug. Drop below 50% and the Merge PR button flashes <code>⚠ merge conflicts</code>, which is the game's way of saying "we need to talk, asshole."</li>
+<li><b>Bounty board</b> — 2–3 optional bounties per sprint (🎯) because nothing motivates you like side quests during crunch.</li>
+<li><b>Breach log</b> — Leak forensics. Every bastard bug that escapes gets a timestamp and an HP% logged for the postmortem. There is always a postmortem.</li>
+<li><b>ROLLBACK terminal</b> — When you lose, you get a terminal with ASCII box-drawing <code>ROLLBACK</code> art, death timestamps, and a random epitaph. Dying has never been this strictly on-brand.</li>
+<li><b>Build status panel</b> — The BUILD obstacle sits there smugly until the first leak. Then it gets a red border, screams <code>Build Failed</code>, and tracks your error count. We've all been there.</li>
+<li><b>Sound</b> — Seven distinct destruction sound signatures for each invader, synthesized live using Web Audio. It starts muted so you don't piss off your coworkers.</li>
+<li><b>Best-run records</b> — Saved in <code>localStorage</code> so your humiliating failures survive between sessions.</li>
+</ul>
+
+<h2>Architecture (Abandon all hope, view-source is hell)</h2>
+<ul>
+<li><b>One fucking file.</b> 1,604 lines. 80KB. HTML, CSS, and JS crammed into a single document like it's 2004 and we've learned absolutely nothing.</li>
+<li><b>One global state object</b>, <code>S</code>, referenced 209 damn times. There is no data flow. There is no unidirectional bullshit. Every function raw-dogs <code>S</code> like a raccoon diving into a trash can.</li>
+<li><b>No modules, no bundler, no framework, no TypeScript.</b> The entire type system is "well, it ran once."</li>
+<li><b><code>6.29</code> is used as 2π in 23 places.</b> Not <code>Math.PI * 2</code>. Not a named constant. Twenty-three hardcoded <code>6.29</code>s smeared everywhere because the author was apparently paid per literal.</li>
+<li><b>Magic numbers out the ass:</b> 35px cells, 28×17 grid, 0.6s hold threshold, 3s auto-start countdown. All tuned by feel, documented literally nowhere. This paragraph is the only documentation.</li>
+<li><b>Canvas immediate mode:</b> The whole UI — menu bar, panels, code tree, minimap, bugs, projectiles, particles, toasts — is redrawn from scratch every single frame. The menu bar is painted <i>last</i> to stay on top, which is both a rendering strategy and a sad metaphor.</li>
+<li><b>Theme system:</b> 8 themes × dark/light, saved under <code>bugbash_theme_v1</code>. This trash game has a more sophisticated theming architecture than most funded startups.</li>
+</ul>
+
+<h2>Known Issues (Filed by QA, totally ignored by Dev — a tradition)</h2>
+<ul>
+<li><b>Fixed in v77:</b> 16 quoted <code>'ga(...)'</code> strings were passed as canvas colors. The canvas silently ignored them because they aren't colors, they are <i>cries for help</i>. Several elements simply didn't render for three whole versions and no one gave a shit.</li>
+<li><b>Fixed in v105:</b> The BUILD error counter read a breach log that capped at 8 entries, so "8 errors" actually meant "8 or more, we've stopped counting, much like your manager."</li>
+<li><b>Fixed in v119:</b> Arming auto-start before the first sprint changed the button label to "Sprint 1 incoming" and then did absolutely nothing. The label was aspirational. The timer was not.</li>
+<li><b>Ongoing:</b> Wave 1 was cleared by a bot. Waves 2–12 are completely theoretical. Balance is a myth.</li>
+<li><b>Ongoing:</b> Zero live browser verification has ever occurred. Localhost is completely unreachable from the dev VM, so every release is validated by a headless stub harness and a terminal amount of unearned confidence.</li>
+</ul>
+
+<h2>Testing</h2>
+<p>We forgot to hire QA.</p>
+
+<h2>Backlog (The Graveyard)</h2>
+<p>Out of 20 proposed improvements, exactly 8 were built. The rest are rotting in the backlog just like your actual job:</p>
+<p>2. Standalone leakless bounty · 4. Per-defender targeting priorities · 6. Memory Leak bug (the tragic irony of deprioritizing this isn't lost on anyone) · 7. Defender synergies · 9. Range preview · 12. Leak screen shake · 13. Endless boss affixes · 16. <code>SHIPPED v1.0</code> victory sequence · 17. Upgrade specializations · 19. Maze templates · 20. Run report.</p>
+<p>They'll get built right after the tech debt sprint. You know exactly the fucking one I mean.</p>
+
+<h2>Contributing</h2>
+<p>Don't. There are nearly 1,200 lines of code and every single one is load-bearing. If you absolutely must, the workflow is: copy the latest file, increment the number, change one thing, attach the new file, and never overwrite the old one. The cache is always watching.</p>
+
+<h2>License</h2>
+<p><i>DON'T!</i> Just don't. It's not worth it. The code is buggy. The code is janky. The code is a mess. It's really not worth the effort of branching it.</p>
+
+<p class="hfoot">— You found the easter egg. Ten clicks on Help. Now close this and go fix prod. —</p>
+      </div>
+    </div>
+  </div>
+  <div id="overlay">
+    <h2>Bug Bash!</h2>
+    <p>Production is under siege. Bugs are crawling out of JIRA-404 and pathfinding through
+    your IDE &mdash; around the terminal, the explorer, the problems panel &mdash; straight
+    for the release. There is no fixed route: your dev tools ARE the maze. Build long
+    winding kill-corridors, but the game refuses any tool that seals the maze shut.
+    Cheapest first: Linter, rm -rf, Try/Catch, Breakpoints to freeze execution, and a
+    Microservices fan-out doing unspeakable things with concurrency. Heisenbugs fly over
+    everything. If uptime hits 0.00%, it's rollback forever.</p>
+    <p id="recLine" style="font-size:12px;color:#2ea942;margin-bottom:16px;letter-spacing:1px;"></p>
+    <button class="cbtn" id="bStart" style="font-size:18px; padding:12px 34px;">&#128640; START SPRINT</button>
+  </div>
+</div>
+<div id="selpanel"><span style="color:#6e624b">Click a dev tool, then a grid square, to deploy it. Click a placed tool to upgrade / sell it.</span></div>
+<div id="tip">Pro move: the dotted line is the bugs' current route &mdash; stretch it past your Breakpoints and Try/Catch splash, and never fully wall the release. Toggle Auto-build for spectator mode.</div>
+<script>
+/* ================= THEMES ================= */
+const THEMES={
+ haxx0rz:{name:'Haxx0rz',dark:{background:'#050505',foreground:'#00ff66',muted:'#1a4d2e',accent1:'#33ff88',accent2:'#00ffcc',accent3:'#ccff00',error:'#ff0055'},
+                        light:{background:'#e6f9f0',foreground:'#004d1a',muted:'#85c9a3',accent1:'#008037',accent2:'#0088aa',accent3:'#7a9900',error:'#cc0044'}},
+ catppuccin:{name:'Catppuccin',dark:{background:'#1e1e2e',foreground:'#cdd6f4',muted:'#6c7086',accent1:'#89b4fa',accent2:'#cba6f7',accent3:'#a6e3a1',error:'#f38ba8'},
+                        light:{background:'#eff1f5',foreground:'#4c4f69',muted:'#9ca0b0',accent1:'#1e66f5',accent2:'#8839ef',accent3:'#40a02b',error:'#d20f39'}},
+ dracula:{name:'Dracula',dark:{background:'#282a36',foreground:'#f8f8f2',muted:'#6272a4',accent1:'#bd93f9',accent2:'#ff79c6',accent3:'#8be9fd',error:'#ff5555'},
+                        light:{background:'#f8f8f2',foreground:'#282a36',muted:'#6272a4',accent1:'#55308d',accent2:'#a8005b',accent3:'#007f8a',error:'#c70000'}},
+ gotham:{name:'Gotham',dark:{background:'#0c1014',foreground:'#99d1ce',muted:'#24303c',accent1:'#26a98b',accent2:'#195466',accent3:'#edb54b',error:'#c23127'},
+                        light:{background:'#e8efed',foreground:'#0c1014',muted:'#b0c4c0',accent1:'#15735c',accent2:'#0b3c4a',accent3:'#b88219',error:'#a32119'}},
+ iceberg:{name:'Iceberg',dark:{background:'#161821',foreground:'#c6c8d1',muted:'#6b7089',accent1:'#84a0c6',accent2:'#b4be82',accent3:'#e2a478',error:'#e06c75'},
+                        light:{background:'#e8e9ec',foreground:'#33374c',muted:'#8389a3',accent1:'#2d539e',accent2:'#668e3d',accent3:'#c57431',error:'#cc241d'}},
+ moonfly:{name:'Moonfly',dark:{background:'#080808',foreground:'#bdbdbd',muted:'#585858',accent1:'#80a0ff',accent2:'#ae81ff',accent3:'#36c692',error:'#ff5189'},
+                        light:{background:'#f8f8f2',foreground:'#1c1c1c',muted:'#8a8a8a',accent1:'#1a51c6',accent2:'#6339a1',accent3:'#007342',error:'#d31245'}},
+ noctis:{name:'Noctis',dark:{background:'#1b2932',foreground:'#c5c8c6',muted:'#4b5f6d',accent1:'#42b4ca',accent2:'#73ba25',accent3:'#e67e22',error:'#ff5370'},
+                        light:{background:'#f3f3f3',foreground:'#11232d',muted:'#8ca0ad',accent1:'#008fa8',accent2:'#498800',accent3:'#c25700',error:'#d00000'}},
+ tokyo:{name:'Tokyo',dark:{background:'#1a1b26',foreground:'#a9b1d6',muted:'#565f89',accent1:'#7aa2f7',accent2:'#bb9af7',accent3:'#9ece6a',error:'#f7768e'},
+                        light:{background:'#e1e2e7',foreground:'#3760bf',muted:'#848cb0',accent1:'#2e7de9',accent2:'#9854f6',accent3:'#587539',error:'#f52a65'}},
+};
+let TNAME='haxx0rz', TMODE='dark';
+function hx(h){ const n=parseInt(h.slice(1),16); return [n>>16&255,n>>8&255,n&255]; }
+function hxm(a,b,t){ const A=hx(a),B=hx(b); return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join(''); }
+let TC={};
+function applyTheme(){
+  for(const k in gaCache) delete gaCache[k];
+  for(const k in gbaCache) delete gbaCache[k];
+  const p=THEMES[TNAME][TMODE];
+  const light=TMODE==='light';
+  const mutedC=light?hxm(p.muted,p.foreground,.45):p.muted;
+  const lineC=hxm(p.background,p.foreground,light?.45:.22);
+  const bodyC=hxm(p.background,p.foreground,light?.92:.75);
+  const panelC=hxm(p.background,p.foreground,.05), panel2C=hxm(p.background,p.foreground,.10);
+  const r=document.documentElement.style;
+  r.setProperty('--bg',p.background); r.setProperty('--fg',p.foreground); r.setProperty('--muted',mutedC);
+  r.setProperty('--a1',p.accent1); r.setProperty('--a2',p.accent2); r.setProperty('--a3',p.accent3);
+  r.setProperty('--err',p.error); r.setProperty('--a1rgb',hx(p.accent1).join(','));
+  r.setProperty('--panel',panelC); r.setProperty('--panel2',panel2C);
+  r.setProperty('--line',lineC); r.setProperty('--body',bodyC);
+  const argb=hx(p.accent1), brgb=hx(p.background);
+  TC={bg:p.background,fg:p.foreground,muted:mutedC,a1:p.accent1,a2:p.accent2,a3:p.accent3,err:p.error,
+      panel:panelC,panel2:panel2C,line:lineC,body:bodyC,
+      argb:argb,brgb:brgb};
+  try{ localStorage.setItem('bugbash_theme_v1',JSON.stringify({theme:TNAME,mode:TMODE})); }catch(e){}
+  const md=document.getElementById('themeMode'); if(md) md.innerHTML=TMODE==='dark'?'&#127769;':'&#9728;&#65039;';
+  const sl=document.getElementById('themeSel'); if(sl) sl.value=TNAME;
+}
+const gaCache=Object.create(null), gbaCache=Object.create(null);
+function ga(a){ a=Math.round(a*100)/100; let s=gaCache[a]; if(s===undefined){ const c=TC.argb||[51,255,136]; s=gaCache[a]='rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; } return s; }
+function gba(a){ a=Math.round(a*100)/100; let s=gbaCache[a]; if(s===undefined){ const c=TC.brgb||[5,5,5]; s=gbaCache[a]='rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; } return s; }
+try{ const _ts=JSON.parse(localStorage.getItem('bugbash_theme_v1'));
+     if(_ts&&THEMES[_ts.theme]&&THEMES[_ts.theme][_ts.mode]){ TNAME=_ts.theme; TMODE=_ts.mode; } }catch(e){}
+applyTheme();
+const _logo=document.getElementById('logo');
+_logo.onclick=e=>{ if(e.altKey){ TMODE=TMODE==='dark'?'light':'dark'; }
+  else { const ks=Object.keys(THEMES); TNAME=ks[(ks.indexOf(TNAME)+1)%ks.length]; }
+  applyTheme(); };
+_logo.oncontextmenu=e=>{ e.preventDefault(); TMODE=TMODE==='dark'?'light':'dark'; applyTheme(); };
+'use strict';
+/* ================= CONFIG ================= */
+const W = 980, H = 620;
+const cv = document.getElementById('cv');
+let ctx = cv.getContext('2d');
+const mainCtx = ctx;
+const ideStatic = document.createElement('canvas'); ideStatic.width=W; ideStatic.height=H;
+const sctx = ideStatic.getContext('2d');
+let ideStaticDirty = true, ideStaticKey = '';
+function refreshStaticIDE(){ ctx=sctx; sctx.clearRect(0,0,W,H); drawIDEStatic(); ctx=mainCtx; }
+
+// Mazing grid
+const CELL = 35, COLS = 28, ROWS = 17, OX = 0, OY = 12;
+const CELLPX=new Float32Array(COLS), CELLPY=new Float32Array(ROWS);
+for(let _c=0;_c<COLS;_c++) CELLPX[_c]=OX+_c*CELL+CELL/2;
+for(let _r=0;_r<ROWS;_r++) CELLPY[_r]=OY+_r*CELL+CELL/2;
+const DUCK_R=15*35, DUCK_R2=DUCK_R*DUCK_R; // rubber duck aura: 15 cells
+const ENTRANCE = { c: 0, r: 8 };   // crack in the baseboard
+const EXITC    = { c: 26, r: 8 };   // the coffee mug's square
+const MUG = { x: OX + 26*CELL + CELL/2, y: OY + 8*CELL + CELL/2 };
+
+function cellXY(c, r){ return { x: OX + c*CELL + CELL/2, y: OY + r*CELL + CELL/2 }; }
+function cellOf(x, y){ return { c: Math.floor((x - OX)/CELL), r: Math.floor((y - OY)/CELL) }; }
+function inGrid(c, r){ return c >= 0 && c < COLS && r >= 0 && r < ROWS; }
+function foeCell(f){ return {c:Math.max(0,Math.min(COLS-1,Math.floor((f.x-OX)/CELL))), r:Math.max(0,Math.min(ROWS-1,Math.floor((f.y-OY)/CELL)))}; }
+
+// The arsenal, cheapest first: pencil, clippers, ibuprofen, white-out, outlet.
+const TOWERS = {
+  pencil:  { name:'Linter',       cost:5,  range:120, dmg:0.5, rate:2.4, color:'#baaa3e', icon:'\u270F\uFE0F', desc:'Yellow squiggles. Cheap and relentless.' },
+  clipper: { name:'rm -rf',        cost:8, range:85,  dmg:3,   rate:0.75,color:'#bababa', icon:'\uD83D\uDC80', desc:'DEL. Massive damage, point blank.' },
+  ibu:     { name:'Try/Catch',     cost:13, range:145, dmg:2, rate:0.85,splash:5, color:'#3ea18d', icon:'{}', desc:'Contains the blast. Splash damage.' },
+  whiteout:{ name:'Breakpoint',    cost:20, range:130, dmg:0.5, rate:0.9, splash:5, slow:0.55, slowDur:2.0, color:'#c13d3d', icon:'\uD83D\uDD34', desc:'Freezes execution. Slows on hit.' },
+  outlet:  { name:'Microservices', cost:40, range:200, dmg:1,  rate:1.2, chain:4, color:'#3b5984', icon:'\uD83D\uDDA7', desc:'Fan-out requests. Zaps 4 bugs.' },
+};
+
+const FOES = {
+  dust:  { hp:3,   speed:58,  reward:1,   r:11, color:'#3ea18d', dark:'#256456', name:'404', lives:1, code:'404' },
+  ant:   { hp:2,   speed:98,  reward:1,   r:8,  color:'#b0b088', dark:'#868660', name:'NaN', lives:1, code:'NaN' },
+  crumb: { hp:1,    speed:128, reward:0.5, r:6,  color:'#baaa3e', dark:'#91822b', name:'WARN', lives:1, code:'WARN' },
+  beetle:{ hp:20,  speed:40,  reward:3,  r:14, color:'#c13d3d', dark:'#862525', name:'500', lives:2, code:'500' },
+  mega:  { hp:100, speed:32,  reward:40, r:23, color:'#cc1515', dark:'#720d0d', name:'KERNEL PANIC', lives:5, code:'KERNEL PANIC' },
+  gnat:  { hp:3,   speed:112, reward:1,  r:7,  color:'#9e6b9a', dark:'#623f6b', name:'HEISENBUG', lives:1, flying:true, code:'HEISENBUG' },
+  race:  { hp:8,   speed:72,  reward:2,  r:10, color:'#e07b2e', dark:'#8a4a1a', name:'RACE', lives:1, code:'RACE COND' },
+};
+
+const WAVES = [
+  [{t:'dust',n:8,g:0.9}],
+  [{t:'dust',n:10,g:0.7},{t:'ant',n:5,g:0.5}],
+  [{t:'ant',n:14,g:0.45},{t:'dust',n:6,g:0.6}],
+  [{t:'crumb',n:22,g:0.3},{t:'dust',n:6,g:0.6}],
+  [{t:'dust',n:12,g:0.5},{t:'ant',n:12,g:0.4},{t:'gnat',n:10,g:0.4}],
+  [{t:'beetle',n:6,g:1.1},{t:'race',n:4,g:1.2},{t:'dust',n:14,g:0.45}],
+  [{t:'ant',n:30,g:0.3}],
+  [{t:'crumb',n:34,g:0.22},{t:'ant',n:14,g:0.35},{t:'race',n:6,g:1.0},{t:'gnat',n:14,g:0.35}],
+  [{t:'beetle',n:12,g:0.8},{t:'dust',n:16,g:0.4}],
+  [{t:'crumb',n:44,g:0.18},{t:'ant',n:22,g:0.3},{t:'beetle',n:10,g:0.7},{t:'race',n:8,g:0.8},{t:'gnat',n:18,g:0.3}],
+  [{t:'mega',n:1,g:1},{t:'dust',n:16,g:0.5},{t:'ant',n:16,g:0.4}],
+  [{t:'beetle',n:24,g:0.55},{t:'ant',n:30,g:0.28},{t:'race',n:10,g:0.7},{t:'gnat',n:24,g:0.28}],
+];
+// The desk clutter: permanent maze walls. Invaders pathfind around them.
+let probCache={w:-1,c:{}}; // upcoming-sprint composition for the PROBLEMS panel
+function foeCode(t){ return t==='race'?'RACE CONDITION':FOES[t].code; }
+const DECOR_BLOCKS = [ // grid-aligned: x=c*35, y=12+r*35, w/h in whole cells
+  {x:700,y:82,w:175,h:105},   // terminal panel (top right)
+  {x:35,y:467,w:140,h:105},   // paperwork (bottom left)
+  {x:245,y:47,w:140,h:70},    // RAM / electronics (top)
+  {x:70,y:152,w:105,h:140},   // problems panel (left)
+  {x:490,y:467,w:105,h:105},  // debug panel (bottom center)
+  {x:805,y:467,w:140,h:70},   // build-failed toast (bottom right)
+  {x:315,y:257,w:105,h:140},  // code tree (center)
+  {x:630,y:362,w:175,h:105},  // breach log (moved to the old tree spot)
+];
+const EXPLORER_LS=[ // [path, kind] d=dir f=file h=hot — endlessly scrolled in the EXPLORER panel
+['/bin/','d'],['/bin/lint','f'],['/bin/ship-it','f'],
+['/etc/','d'],['/etc/bugbash/','d'],['/etc/bugbash/cfg.yaml','f'],
+['/home/','d'],['/home/dev/','d'],['/home/dev/src/','d'],
+['/home/dev/src/main.ts','f'],['/home/dev/src/bugs.js','f'],
+['/home/dev/test/','d'],['/home/dev/test/maze.js','f'],
+['/opt/','d'],['/opt/bugbash/','d'],['/opt/bugbash/rollback','f'],
+['/var/','d'],['/var/log/','d'],['/var/log/sprint-07.log','f'],
+['/var/log/breach.log','h'],['/var/spool/','d'],['/var/spool/queue','f'],
+['/tmp/','d'],['/tmp/.bug-4021','f'],['/usr/bin/bugbash','f'],
+['/proc/404','h'],['/dev/null','f']];
+const BLOCK_INFO=[
+  {n:'TERMINAL',      t:'2,847 commands run. 2,846 were nearly rm -rf.'},
+  {n:'PAPERWORK',     t:'TPS reports. Nobody has read one since 2019.'},
+  {n:'RAM',           t:'32GB installed. Chrome is using all of it.'},
+  {n:'GADGET PILE',   t:'Dead gadgets. The drawer of shame, wall-sized.'},
+  {n:'DEBUG',         t:'Paused since Tuesday. Nobody knows what it is waiting for.'},
+  {n:'COFFEE',        t:'Cup #4. It is 2am somewhere.'},
+  {n:'\\BRANCHES',    t:'Someone merged without review. Again.'},
+  {n:'BREACH LOG',    t:'Every bug that reached prod. None of them were invited.'},
+];
+const _blockCellCache={};
+function blockCells(i){
+  if(_blockCellCache[i]!=null) return _blockCellCache[i];
+  const d=DECOR_BLOCKS[i]; let n=0;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const p=cellXY(c,r);
+    if(p.x>d.x&&p.x<d.x+d.w&&p.y>d.y&&p.y<d.y+d.h&&BASE_BLOCKED[r][c]) n++;
+  }
+  _blockCellCache[i]=n; return n;
+}
+
+/* ================= MAZE / PATHFINDING ================= */
+let BASE_BLOCKED = null;
+function buildBaseBlocked(){
+  const b = [];
+  for(let r=0;r<ROWS;r++){ b.push([]); for(let c=0;c<COLS;c++){
+    const p = cellXY(c,r);
+    b[r].push(DECOR_BLOCKS.some(d=> p.x>d.x && p.x<d.x+d.w && p.y>d.y && p.y<d.y+d.h));
+  }}
+  return b;
+}
+// BFS shortest path; returns array of {c,r} from start to goal inclusive, or null.
+const BFS_N=COLS*ROWS;
+const bfsSeen=new Int32Array(BFS_N); // generation stamps: no per-call 2D arrays
+const bfsPrev=new Int32Array(BFS_N); // packed parent cell index, -1 = none
+const bfsQ=new Int32Array(BFS_N);    // flat int queue: head pointer, no shift()
+let bfsGen=0;
+function bfs(blocked, s, g){
+  if(blocked[g.r][g.c] || blocked[s.r][s.c]) return null;
+  if(++bfsGen===2147483647){ bfsSeen.fill(0); bfsGen=1; } // stamp wrap guard
+  const gen=bfsGen, si=s.r*COLS+s.c, gi=g.r*COLS+g.c;
+  let qh=0, qt=0;
+  bfsQ[qt++]=si; bfsSeen[si]=gen; bfsPrev[si]=-1;
+  while(qh<qt){
+    const cur=bfsQ[qh++], cc=cur%COLS, cr=(cur-cc)/COLS;
+    if(cur===gi){
+      const path=[]; let n=cur;
+      while(n!==-1){ const pc=n%COLS; path.push({c:pc, r:(n-pc)/COLS}); n=bfsPrev[n]; }
+      path.reverse();
+      return path;
+    }
+    for(const d of FDIRS){
+      const nc=cc+d[0], nr=cr+d[1];
+      if(nc<0||nc>=COLS||nr<0||nr>=ROWS) continue;
+      const ni=nr*COLS+nc;
+      if(bfsSeen[ni]!==gen && !blocked[nr][nc]){
+        bfsSeen[ni]=gen; bfsPrev[ni]=cur;
+        bfsQ[qt++]=ni;
+      }
+    }
+  }
+  return null;
+}
+function fullBlocked(){
+  const b = BASE_BLOCKED.map(row=> row.slice());
+  for(const t of S.towers) b[t.r][t.c] = true;
+  return b;
+}
+function towerAt(c, r){ return S.towers.find(t=> t.c===c && t.r===r); }
+
+/* ================= STATE ================= */
+let S;
+function newState(){
+  return {
+    money:20, lives:20, shakeT:0, shakeAmp:0, wave:0, wavesCleared:0, kills:0, escaped:0, termLog:[], gameTime:0, autoSend:false, autoT:0, earlyCalls:0, bounties:[], bountyHistory:[], breaches:[], breachTotal:0, buildFailed:false, started:false, muted:true, upHist:[], upT:0,
+    leakedWave:false, cleanStreak:0, newRec:{wave:false,kills:false,streak:false},
+    towers:[], foes:[], projs:[], parts:[], duck:null,
+    spawnQueue:[], spawnT:0, waveActive:false,
+    speed:1, paused:false, auto:false, placing:null, selected:null,
+    over:false, endless:0, autoT:0, msg:'', msgT:0, incident:0, leakToast:'', leakT:0,
+    route:[], mazeVer:0, // bumps on every place/sell; invalidates the seal cache
+    flowDist:null, flowMax:0, // reverse-BFS distance field: steps from each cell to Merge PR
+  };
+}
+/* ================= BEST-RUN RECORDS ================= */
+const REC_KEY='bugbash_records_v1';
+function loadRec(){ try{ return Object.assign({bestWave:0,mostKills:0,bestStreak:0},JSON.parse(localStorage.getItem(REC_KEY)||'{}')); }catch(e){ return {bestWave:0,mostKills:0,bestStreak:0}; } }
+function saveRec(){ try{ localStorage.setItem(REC_KEY,JSON.stringify(REC)); }catch(e){} }
+let REC=loadRec();
+function noteRecord(kind,val){ if(val>REC[kind]){ REC[kind]=val; saveRec(); return true; } return false; }
+function cleanSprintStr(n){ return n+' clean sprint'+(n===1?'':'s'); }
+function setWaveLabel(t){ document.getElementById('bWaveLabel').textContent=t; }
+const BSHORT={pencil:'lint',clipper:'rm-rf',ibu:'try',whiteout:'brkpt',outlet:'micro'};
+function genBounties(){
+  S.bounties=[];
+  const bugs=['dust','ant','crumb','beetle'];
+  const towers=Object.keys(TOWERS);
+  const nb=S.wave>=8?3:2;
+  const pool=[];
+  // kill bounties: bug x tower x count
+  for(let i=0;i<3;i++){
+    const bug=bugs[Math.floor(Math.random()*bugs.length)];
+    const tower=towers[Math.floor(Math.random()*towers.length)];
+    const n=S.wave<=3?8:S.wave<=7?13:20;
+    pool.push({kind:'kill', bug, tower, n, prog:0, reward:n,
+      label:'Squash '+n+' '+FOES[bug].name+' with '+TOWERS[tower].name,
+      short:FOES[bug].name+'\u00D7'+BSHORT[tower]});
+  }
+  pool.push({kind:'leakless', n:1, prog:0, reward:S.wave<=4?5:S.wave<=8?8:13,
+    label:'Clear sprint '+S.wave+' with zero leaks', short:'leakless'});
+  pool.push({kind:'early', n:2, prog:0, reward:3,
+    label:'Call '+2+' sprints early', short:'early\u00D72'});
+  // shuffle, take nb, avoid duplicate kinds except kill
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+  const seen=new Set();
+  for(const b of pool){
+    if(S.bounties.length>=nb) break;
+    if(b.kind!=='kill' && seen.has(b.kind)) continue;
+    seen.add(b.kind); b.done=false; b.half=false;
+    S.bounties.push(b);
+  }
+  renderDrawer();
+  S.msg='\uD83C\uDFAF New bounties: '+S.bounties.map(b=>b.short+' (+'+b.reward+')').join(', '); S.msgT=4;
+  for(const b of S.bounties) tlog('BOUNTY: '+b.short+' \u2192 +'+b.reward,TC.a3);
+}
+function renderDrawer(){
+  const d=document.getElementById('bountyDrawer');
+  const nEl=document.getElementById('bBountyN');
+  const active=S.bounties.filter(b=>!b.done).length;
+  if(nEl) nEl.textContent=active?' '+active:'';
+  let hh='<div class="bd-head"><span>\uD83C\uDFAF BOUNTY BOARD</span><span class="bd-x" id="bountyX">\u00D7</span></div>';
+  if(!S.bounties.length) hh+='<div class="bd-empty">No bounties yet.<br>Start a sprint.</div>';
+  for(const b of S.bounties){
+    const pct=Math.min(100,Math.round(b.prog/b.n*100));
+    hh+='<div class="bcard'+(b.done?' done':'')+'">'
+      +'<div class="bcard-top"><span>'+b.label+'</span><span class="pts">+'+b.reward+' story points</span></div>'
+      +'<div class="bar"><i style="width:'+pct+'%"></i></div>'
+      +'<div class="bcard-sub">'+Math.min(b.prog,b.n)+' / '+b.n+' \u00B7 expires end of sprint'+(b.done?' \u00B7 \u2713':'')+'</div>'
+      +'</div>';
+  }
+  if(S.bountyHistory.length){
+    hh+='<div class="bd-hist-title">COMPLETED THIS RUN</div>';
+    for(const x of S.bountyHistory) hh+='<div class="bd-hist"><span class="ok">\u2713</span> '+x+'</div>';
+  }
+  d.innerHTML=hh;
+  const x=document.getElementById('bountyX');
+  if(x) x.onclick=()=>d.classList.remove('open');
+}
+function bountyProg(b){
+  b.prog++;
+  if(!b.half && b.prog<b.n && b.prog/b.n>=0.5){
+    b.half=true;
+    tlog('BOUNTY '+b.short+' '+Math.round(b.prog/b.n*100)+'%',TC.a3);
+  }
+  if(b.prog>=b.n) completeBounty(b);
+}
+function completeBounty(b){
+  if(b.done) return;
+  b.done=true;
+  S.money+=b.reward;
+  refreshHud();
+  S.bountyHistory.push(b.label+' \u2014 +'+b.reward);
+  S.msg='\uD83C\uDFAF BOUNTY COMPLETE: '+b.label+' \u2192 +'+b.reward+' story points'; S.msgT=4;
+  tlog('BOUNTY COMPLETE +'+b.reward+' story points','#cc8d00');
+  sfxBounty();
+  renderDrawer();
+  const bb=document.getElementById('bBounty');
+  if(bb){ bb.classList.add('on'); setTimeout(()=>bb.classList.remove('on'),1600); }
+}
+function autoArmed(){ return S.autoSend||S.auto; }
+function maybeArmAutoStart(){ if(autoArmed() && !S.waveActive && S.autoT<=0 && !S.over && S.started) S.autoT=3; }
+function refreshWaveButton(){
+  if(autoArmed() && S.autoT>0) setWaveLabel('Sprint '+(S.wave+1)+' incoming ('+Math.ceil(S.autoT)+')');
+  else if(autoArmed()) setWaveLabel('Sprint '+(S.wave+1)+' incoming');
+  else setWaveLabel('\u25B6 Start Sprint '+(S.wave+1)+(S.waveActive?' early':''));
+}
+function fmtTime(s){ const m=Math.floor(s/60), ss=Math.floor(s%60); return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss; }
+function tlog(msg,color){
+  if(S.duck) return; // duck holds the terminal: only its line shows
+  const pre='['+fmtTime(S.gameTime)+'] ';
+  const _tc={'#29cc29':TC.a1,'#7dff7d':TC.a3,'#cc5656':TC.err,'#197e19':TC.muted};
+  S.termLog.push({t:pre+msg, c:_tc[color]||color||TC.a1});
+  if(S.termLog.length>4) S.termLog.shift();
+}
+function hpScale(){ return 1 + 0.13*(S.wave-1) + 0.05*Math.max(0,S.endless); }
+function computeRoute(){ S.route = bfs(fullBlocked(), ENTRANCE, EXITC) || []; }
+const FDIRS=[[1,0],[-1,0],[0,1],[0,-1]];
+function computeFlow(){ // one reverse BFS from the exit; every foe steers down the same field
+  const blocked=fullBlocked();
+  const dist=[]; let maxD=0;
+  for(let r=0;r<ROWS;r++) dist.push(new Array(COLS).fill(Infinity));
+  if(!blocked[EXITC.r][EXITC.c]){
+    const q=[EXITC.c,EXITC.r]; let head=0;
+    dist[EXITC.r][EXITC.c]=0;
+    while(head<q.length){
+      const c=q[head++], r=q[head++], nd=dist[r][c]+1;
+      for(const d of FDIRS){
+        const nc=c+d[0], nr=r+d[1];
+        if(inGrid(nc,nr)&&!blocked[nr][nc]&&dist[nr][nc]===Infinity){
+          dist[nr][nc]=nd; if(nd>maxD) maxD=nd;
+          q.push(nc,nr);
+        }
+      }
+    }
+  }
+  S.flowDist=dist; S.flowMax=maxD;
+}
+function flowNeighbor(c,r,dir){ // dir=+1: step toward exit; -1: step away from exit
+  const D=S.flowDist; if(!D) return null;
+  const d0=D[r][c]; if(d0===Infinity) return null;
+  const want=d0-dir;
+  for(const d of FDIRS){
+    const nc=c+d[0], nr=r+d[1];
+    if(inGrid(nc,nr)&&D[nr][nc]===want) return {c:nc,r:nr};
+  }
+  return null;
+}
+
+/* ================= HELPERS ================= */
+function towerStats(key,lvl){
+  const b=TOWERS[key];
+  const dmg = lvl===1?b.dmg : lvl===2?pokerUp(b.dmg) : pokerUp(pokerUp(b.dmg)); // poker-scale damage per shot
+  const spl = b.splash||0;
+  const splash = spl===0?0 : lvl===1?spl : lvl===2?pokerUp(spl) : pokerUp(pokerUp(spl));
+  const range = b.range*(lvl===1?1:lvl===2?1.15:1.3);
+  return {
+    range: range, range2: range*range,
+    dmg: dmg, rate: b.rate*(lvl===1?1:lvl===2?1.18:1.4),
+    splash: splash,
+    slow: b.slow? Math.min(0.75, b.slow+0.12*(lvl-1)) : 0,
+    slowDur: (b.slowDur||0)+0.4*(lvl-1),
+    chain: b.chain||0,
+  };
+}
+const POKER=[0,0.5,1,2,3,5,8,13,20,40,100];
+function pokerUp(v){ for(const p of POKER){ if(p>v) return p; } return 100; }
+function pokerNear(v){ let best=POKER[0]; for(const p of POKER){ if(Math.abs(p-v)<Math.abs(best-v)) best=p; } return best; }
+function upCost(t){ const u1=pokerUp(TOWERS[t.key].cost); return t.lvl===1?u1:pokerUp(u1); } // climb the scale one step per level
+function invested(t){ let c=TOWERS[t.key].cost; if(t.lvl>1)c+=upCost({key:t.key,lvl:1}); if(t.lvl>2)c+=upCost({key:t.key,lvl:2}); return c; }
+// DTD rule: a tower is a wall. Refuse any placement that seals the maze.
+let sealCache={c:-1,r:-1,ver:-1,open:true};
+function sealCheck(c, r){ // does walling (c,r) leave a route? cached per maze version
+  if(sealCache.c===c && sealCache.r===r && sealCache.ver===S.mazeVer) return sealCache.open;
+  const test = fullBlocked();
+  test[r][c] = true;
+  const open = !!bfs(test, ENTRANCE, EXITC);
+  sealCache = {c:c, r:r, ver:S.mazeVer, open:open};
+  return open;
+}
+function canPlaceCell(c, r){
+  if(!inGrid(c,r)) return {ok:false, why:'Off the desk.'};
+  if(BASE_BLOCKED[r][c]) return {ok:false, why:'The clutter is in the way.'};
+  if((c===ENTRANCE.c && r===ENTRANCE.r) || (c===EXITC.c && r===EXITC.r))
+    return {ok:false, why:'Not on the ticket or the release.'};
+  if(towerAt(c,r)) return {ok:false, why:'Already armed.'};
+  for(const f of S.foes){
+    if(f.dead) continue;
+    if(Math.floor((f.x-OX)/CELL)===c && Math.floor((f.y-OY)/CELL)===r) return {ok:false, why:'A foe is standing there.'};
+  }
+  if(!sealCheck(c, r)) return {ok:false, why:'That would seal the maze shut.'};
+  return {ok:true};
+}
+function placeTowerAt(c, r, key){
+  const chk = canPlaceCell(c, r);
+  if(!chk.ok || S.money < TOWERS[key].cost) return chk;
+  S.money -= TOWERS[key].cost;
+  const p = cellXY(c, r);
+  S.towers.push({key, c, r, x:p.x, y:p.y, lvl:1, cd:0, st:towerStats(key,1)});
+  S.mazeVer++;
+  burst(p.x, p.y, TOWERS[key].color, 10);
+  computeRoute();
+  computeFlow();
+  return {ok:true};
+}
+
+/* ================= WAVES / SPAWNING ================= */
+function buildQueue(w){
+  const q=[];
+  let def;
+  if(w<=WAVES.length) def=WAVES[w-1];
+  else {
+    const e=w-WAVES.length;
+    def=[{t:'dust',n:10+4*e,g:0.4},{t:'ant',n:12+4*e,g:0.3},{t:'crumb',n:16+6*e,g:0.2},
+         {t:'beetle',n:6+3*e,g:0.6},{t:'gnat',n:8+4*e,g:0.3},{t:'race',n:6+2*e,g:0.8}];
+    if(e%3===0) def.push({t:'mega',n:Math.floor(e/3),g:2});
+  }
+  def.forEach(g=>{ for(let i=0;i<g.n;i++) q.push({t:g.t, gap:g.g}); });
+  for(let i=q.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=q[i]; q[i]=q[j]; q[j]=tmp; }
+  return q;
+}
+function startWave(){
+  if(S.waveActive || S.over) return;
+  if(!S.flowDist) computeFlow();
+  S.wave++;
+  if(S.wave>WAVES.length && S.endless===0){ S.endless=1; S.msg='ENDLESS MODE — how long can the release survive?'; S.msgT=8; }
+  if(S.wave>WAVES.length) S.endless=S.wave-WAVES.length;
+  S.spawnQueue=buildQueue(S.wave);
+  S.spawnT=0.3; S.waveActive=true;
+  S.leakedWave=false;
+  S.autoT=0;
+  genBounties();
+  tlog('-- Sprint '+S.wave+' started --',TC.a3);
+  document.getElementById('waveTip').classList.add('hidden');
+  const bw0=document.getElementById('bWave');
+  bw0.disabled=false;
+  refreshWaveButton();
+}
+function callEarly(){
+  if(!S.waveActive || S.over) return;
+  const remaining=S.spawnQueue.length+S.foes.filter(f=>!f.dead).length;
+  if(!remaining) return; // nothing left — let the sprint clear normally
+  const ebonus=remaining*2;
+  S.money+=ebonus;
+  S.wave++;
+  S.earlyCalls++;
+  for(const b of S.bounties){ if(!b.done&&b.kind==='early') bountyProg(b); }
+  renderDrawer();
+  if(S.wave>WAVES.length && S.endless===0){ S.endless=1; S.msg='ENDLESS MODE \u2014 how long can the release survive?'; S.msgT=8; }
+  if(S.wave>WAVES.length) S.endless=S.wave-WAVES.length;
+  S.spawnQueue=S.spawnQueue.concat(buildQueue(S.wave));
+  S.msg='Sprint '+S.wave+' called early: +'+ebonus+' story points ('+remaining+' bugs still out)';
+  S.msgT=6;
+  tlog('Sprint '+S.wave+' called early #'+S.earlyCalls,TC.a3);
+  document.getElementById('waveTip').classList.add('hidden');
+  refreshWaveButton();
+}
+function spawnFoe(type){
+  const f=FOES[type], flying=!!f.flying;
+  const e=cellXY(ENTRANCE.c, ENTRANCE.r);
+  const foe={
+    type, x:e.x+(Math.random()-0.5)*10, y:e.y+(Math.random()-0.5)*10,
+    hp:f.hp*hpScale(), maxhp:f.hp*hpScale(),
+    speed:f.speed*(0.92+Math.random()*0.16),
+    r:f.r, reward:Math.round(f.reward*(1+0.04*(S.wave-1))*2)/2,
+    slows:[], wob:Math.random()*6.28, flying,
+    tpT:type==='race'?2+Math.random()*2:0,
+  };
+  if(!flying && !S.flowDist) computeFlow(); // defensive: field exists before steering
+  if(S.duck && S.duck.tagged<30){ foe.duckTag=true; S.duck.tagged++; }
+  S.foes.push(foe);
+  if(type==='mega') S.incident=1;
+}
+
+/* ================= SOUND ================= */
+let AC=null; const lastSfx={kill:0,zap:0};
+function ac(){
+  if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function beep(freq,dur,type,vol,slot,gap){
+  if(S.muted) return;
+  const now=performance.now()/1000;
+  if(slot){ if(now-lastSfx[slot]<(gap||0.05)) return; lastSfx[slot]=now; }
+  const a=ac(); if(!a) return;
+  try{
+    const o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(); o.stop(a.currentTime+dur+0.02);
+  }catch(e){}
+}
+function sfxBounty(){ tone(660,0.12,'triangle',0.12); tone(990,0.16,'triangle',0.12,0.09); }
+function sfxLeak(){ beep(130,0.3,'sawtooth',0.09); }
+function sfxZap(){ beep(940+Math.random()*120,0.05,'triangle',0.04,'zap',0.05); }
+function tone(freq,dur,type,vol,delay,slideTo){
+  if(S.muted) return;
+  const a=ac(); if(!a) return;
+  try{
+    const t0=a.currentTime+(delay||0);
+    const o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,t0);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t0+dur);
+    g.gain.setValueAtTime(vol,t0);
+    g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t0); o.stop(t0+dur+0.02);
+  }catch(e){}
+}
+const KILL_SFX={
+  dust:  ()=>{ tone(520,0.07,'square',0.045); },
+  ant:   ()=>{ tone(880,0.06,'sine',0.05); },
+  crumb: ()=>{ tone(440,0.06,'triangle',0.05); tone(330,0.08,'triangle',0.05,0.06); },
+  beetle:()=>{ tone(220,0.15,'sawtooth',0.07,0,110); },
+  gnat:  ()=>{ tone(1200,0.12,'sine',0.04,0,400); },
+  race:  ()=>{ tone(700,0.05,'square',0.04); tone(500,0.05,'square',0.04,0.05); },
+  mega:  ()=>{ tone(300,0.4,'sawtooth',0.09,0,60); tone(150,0.4,'square',0.05,0.05,50); },
+};
+function sfxKill(type){
+  if(S.muted) return;
+  const now=performance.now()/1000;
+  if(type!=='mega'){ if(now-lastSfx.kill<0.06) return; lastSfx.kill=now; }
+  (KILL_SFX[type]||KILL_SFX.dust)();
+}
+
+/* ================= COMBAT ================= */
+function fire(t, st, foe){
+  const ang=Math.atan2(foe.y-t.y, foe.x-t.x);
+  S.projs.push({ x:t.x+Math.cos(ang)*16, y:t.y+Math.sin(ang)*16,
+    target:foe, dmg:st.dmg, splash:st.splash, chain:st.chain,
+    slow:st.slow, slowDur:st.slowDur,
+    color:TOWERS[t.key].color, speed:460, key:t.key });
+  t.cd = 1/st.rate;
+}
+function damageFoe(foe, dmg, key){
+  foe.hp -= dmg;
+  if(foe.hp<=0 && !foe.dead){
+    foe.dead=true; S.kills++;
+    if(noteRecord('mostKills',S.kills)) S.newRec.kills=true;
+    sfxKill(foe.type);
+    S.money += foe.reward;
+    traceBurst(foe);
+    const by=TOWERS[key]?TOWERS[key].name:(key==='duck'?'Rubber Duck':'tower');
+    tlog('> '+FOES[foe.type].name+' terminated by '+by+' (L'+(1+Math.floor(Math.random()*400))+')',TC.a1);
+    for(const b of S.bounties){
+      if(b.done||b.kind!=='kill') continue;
+      if(b.bug===foe.type&&b.tower===key) bountyProg(b);
+    }
+    renderDrawer();
+  }
+}
+function applySlow(foe, amt, dur){
+  foe.slows.push({amt, until:performance.now()/1000+dur});
+}
+function foeEscapes(f){
+  S.buildFailed=true;
+  S.breachTotal++;
+  S.breaches.unshift({t:fmtTime(S.gameTime), bug:FOES[f.type].code, hp:Math.max(1,Math.round(f.hp/f.maxhp*100))});
+  if(S.breaches.length>8) S.breaches.pop();
+  f.dead=true;
+  S.escaped++;
+  S.leakedWave=true;
+  tlog('! '+FOES[f.type].name+' hit production','#cc5656');
+  sfxLeak();
+  S.lives -= FOES[f.type].lives;
+  S.shakeT=0.4; S.shakeAmp=Math.min(5,1.5+FOES[f.type].lives*0.6); // subtle leak shake
+  S.leakToast='\u26A0 INCIDENT \u2014 '+foeCode(f.type)+' hit production (-'+(FOES[f.type].lives*5).toFixed(2)+'% uptime)';
+  S.leakT=5;
+  burst(MUG.x,MUG.y,'#c13d3d',14);
+  if(S.lives<=0){ S.lives=0; gameOver(); }
+}
+function updateFoes(dt){
+  const now=performance.now()/1000;
+  for(const f of S.foes){
+    if(f.dead) continue;
+    f.wob += dt*6;
+    let sp=f.speed;
+    let _sw=0; const _sl=f.slows;
+    for(let _si=0;_si<_sl.length;_si++){ if(_sl[_si].until>now) _sl[_sw++]=_sl[_si]; }
+    _sl.length=_sw;
+    let strongest=0;
+    for(const s of f.slows) strongest=Math.max(strongest, s.amt);
+    sp *= (1-strongest);
+    if(f.flying){
+      const dx=MUG.x-f.x, dy=MUG.y-f.y, d=Math.hypot(dx,dy);
+      if(d < 12){ foeEscapes(f); continue; }
+      f.x+=dx/d*sp*dt; f.y+=dy/d*sp*dt;
+    } else {
+      const fcx=Math.max(0,Math.min(COLS-1,Math.floor((f.x-OX)/CELL)));
+      const fcr=Math.max(0,Math.min(ROWS-1,Math.floor((f.y-OY)/CELL)));
+      if(f.type==='race'){
+        f.tpT-=dt;
+        if(f.tpT<=0){
+          f.tpT=2.5+Math.random()*2;
+          burst(f.x,f.y,FOES.race.color,6);
+          const jump=1+Math.floor(Math.random()*3), dir=Math.random()<0.5?-1:1;
+          let tc=fcx, tr=fcr;
+          for(let k=0;k<jump;k++){ const s=flowNeighbor(tc,tr,dir); if(!s) break; tc=s.c; tr=s.r; }
+          f.x=CELLPX[tc]+(Math.random()-0.5)*8; f.y=CELLPY[tr]+(Math.random()-0.5)*8;
+          burst(f.x,f.y,FOES.race.color,6);
+        }
+      }
+      const nxt=flowNeighbor(fcx,fcr,1);
+      if(!nxt){ foeEscapes(f); continue; }
+      const wx=CELLPX[nxt.c], wy=CELLPY[nxt.r];
+      const dx=wx-f.x, dy=wy-f.y, d=Math.hypot(dx,dy);
+      if(d>=5){ f.x+=dx/d*sp*dt; f.y+=dy/d*sp*dt; }
+    }
+  }
+  let _fw=0; const _fa=S.foes;
+  for(let _fi=0;_fi<_fa.length;_fi++){ if(!_fa[_fi].dead) _fa[_fw++]=_fa[_fi]; }
+  _fa.length=_fw;
+}
+function summonDuck(){
+  if(!S.started||S.over) return;
+  if(S.duck){ S.msg='The duck is already on the case.'; S.msgT=2.5; return; }
+  let bx=-1, by=-1, bd=1e9;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(BASE_BLOCKED[r][c]||towerAt(c,r)) continue;
+    const d=(c-14)*(c-14)+(r-8)*(r-8);
+    if(d<bd){ bd=d; bx=c; by=r; }
+  }
+  if(bx<0) return;
+  burst(CELLPX[bx],CELLPY[by],'#ffd94d',14);
+  S.termLog.length=0; // duck holds the terminal: only its line shows (no timestamp: big type needs the room)
+  S.termLog.push({t:"> Talk to the duck! QA doesn't want to hear it!", c:'#ffd60a'});
+  S.duck={x:CELLPX[bx], y:CELLPY[by], tagged:0}; // watches the next 30 spawned bugs
+  S.msg='Rubber Duck deployed — 30 bugs of quack justice.'; S.msgT=3;
+}
+function updateDuck(dt){
+  const d=S.duck; if(!d) return;
+  for(const f of S.foes){
+    if(f.dead) continue;
+    const dx=f.x-d.x, dy=f.y-d.y;
+    if(dx*dx+dy*dy<=DUCK_R2) damageFoe(f, f.maxhp*0.5*dt, 'duck');
+  }
+  if(d.tagged>=30){
+    let alive=false;
+    for(const f of S.foes){ if(f.duckTag && !f.dead){ alive=true; break; } }
+    if(!alive){ // all 30 watched bugs squashed or escaped -> retire
+      S.duck=null;
+      tlog('> rubber duck retired: 30 bugs quacked.',TC.muted);
+      S.msg='The Rubber Duck has left the board.'; S.msgT=3;
+    }
+  }
+}
+function drawDuck(){
+  const d=S.duck; if(!d) return;
+  const wob=Math.sin(performance.now()/1000*4)*2;
+  const ripT=(performance.now()/1000*90)%DUCK_R;
+  ctx.lineWidth=1.5;
+  for(let i=0;i<3;i++){
+    const rr=(ripT+i*DUCK_R/3)%DUCK_R;
+    if(rr<8) continue;
+    ctx.strokeStyle=ga(0.22*(1-rr/DUCK_R)); // fades to nothing at the 15-cell limit
+    ctx.beginPath(); ctx.arc(d.x,d.y,rr,0,6.29); ctx.stroke();
+  }
+  ctx.fillStyle='#ffd94d';
+  ctx.beginPath(); ctx.ellipse(d.x,d.y+wob,16,12,0,0,6.29); ctx.fill();
+  ctx.beginPath(); ctx.arc(d.x+10,d.y-10+wob,8,0,6.29); ctx.fill();
+  ctx.fillStyle='#f08c1e';
+  ctx.beginPath(); ctx.moveTo(d.x+17,d.y-11+wob); ctx.lineTo(d.x+24,d.y-8+wob); ctx.lineTo(d.x+17,d.y-5+wob); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath(); ctx.arc(d.x+12,d.y-12+wob,1.8,0,6.29); ctx.fill();
+  ctx.fillStyle=TC.muted; ctx.font='8px monospace'; ctx.textAlign='center';
+  ctx.fillText('RUBBER DUCK',d.x,d.y+26);
+}
+function updateTowers(dt){
+  // per-foe targeting data, computed once per frame (was: once per tower per foe)
+  for(const f of S.foes){
+    if(f.dead) continue;
+    const fcx=Math.max(0,Math.min(COLS-1,Math.floor((f.x-OX)/CELL)));
+    const fcr=Math.max(0,Math.min(ROWS-1,Math.floor((f.y-OY)/CELL)));
+    const fd=S.flowDist?S.flowDist[fcr][fcx]:Infinity;
+    const mugD=Math.hypot(f.x-MUG.x, f.y-MUG.y);
+    f._tScore=f.flying ? 10000-mugD : (isFinite(fd)?S.flowMax-fd:0)*1000 - mugD*0.01;
+  }
+  for(const t of S.towers){
+    t.cd = Math.max(0,(t.cd||0)-dt);
+    t.pulse=(t.pulse||0)+dt;
+    const st=t.st||(t.st=towerStats(t.key,t.lvl));
+    if(t.cd>0) continue;
+    let best=null, bestScore=-Infinity;
+    const r2=st.range2;
+    for(const f of S.foes){
+      if(f.dead) continue;
+      const dx=f.x-t.x, dy=f.y-t.y;
+      if(dx*dx+dy*dy > r2) continue;
+      // target the foe closest to the coffee
+      if(f._tScore>bestScore){ bestScore=f._tScore; best=f; }
+    }
+    if(best) fire(t, st, best);
+  }
+}
+function updateProjs(dt){
+  for(const p of S.projs){
+    if(p.done) continue;
+    const f=p.target;
+    if(!f || f.dead){ p.done=true; continue; }
+    const dx=f.x-p.x, dy=f.y-p.y, d2=dx*dx+dy*dy;
+    const step=p.speed*dt, hitR=step+6;
+    if(d2<=hitR*hitR){
+      p.done=true;
+      damageFoe(f, p.dmg, p.key);
+      if(p.slow>0) applySlow(f, p.slow, p.slowDur);
+      if(p.splash>0){
+        burst(f.x,f.y,p.color,8);
+        const sp2=p.splash*p.splash;
+        for(const o of S.foes){
+          if(o===f||o.dead) continue;
+          const ddx=o.x-f.x, ddy=o.y-f.y;
+          if(ddx*ddx+ddy*ddy<=sp2){
+            damageFoe(o, p.dmg*0.7, p.key);
+            if(p.slow>0) applySlow(o, p.slow*0.7, p.slowDur);
+          }
+        }
+      }
+      if(p.chain>0){
+        let n=p.chain, from=f, dmg=p.dmg*0.65;
+        while(n-->0){
+          let nxt=null, nd2=1e18;
+          for(const o of S.foes){
+            if(o.dead||o===from) continue;
+            const ddx=o.x-from.x, ddy=o.y-from.y, dd2=ddx*ddx+ddy*ddy;
+            if(dd2<12100 && dd2<nd2){ nd2=dd2; nxt=o; }
+          }
+          if(!nxt) break;
+          damageFoe(nxt, dmg, p.key);
+          sfxZap();
+          S.parts.push({x1:from.x,y1:from.y,x2:nxt.x,y2:nxt.y,t:0.12,color:p.color});
+          from=nxt; dmg*=0.65;
+        }
+      }
+    } else { const d=Math.sqrt(d2); p.x+=dx/d*step; p.y+=dy/d*step; }
+  }
+  let _pw=0; const _pa=S.projs;
+  for(let _pi=0;_pi<_pa.length;_pi++){ if(!_pa[_pi].done) _pa[_pw++]=_pa[_pi]; }
+  _pa.length=_pw;
+}
+function burst(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*6.28, s=40+Math.random()*90;
+    S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0.5+Math.random()*0.3,color,r:2+Math.random()*3});
+  }
+}
+const TRACE_FRAMES=['at deploy (ship.ts:','at Object.<anonymous> (main.ts:','at emit (events.js:','at processTicks (node:internal:'];
+function traceBurst(foe){
+  const n=foe.r>15?10:5+Math.floor(Math.random()*3);
+  for(let i=0;i<n;i++){
+    const ln=1+Math.floor(Math.random()*400);
+    S.parts.push({
+      txt:i===0?FOES[foe.type].name+' thrown':TRACE_FRAMES[i%TRACE_FRAMES.length]+ln+')',
+      x:foe.x-44+Math.random()*24, y:foe.y-8-i*11,
+      vx:(Math.random()-0.5)*24, vy:34+Math.random()*44,
+      t:0.9+Math.random()*0.4,
+      color:i===0?'#cc4444':FOES[foe.type].color, fs:6, alpha:0.55 });
+  }
+}
+function updateParts(dt){
+  for(const p of S.parts){
+    p.t-=dt;
+    if(p.vx!==undefined){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.92; p.vy*=0.92; }
+  }
+  let _tw=0; const _ta=S.parts;
+  for(let _ti=0;_ti<_ta.length;_ti++){ if(_ta[_ti].t>0) _ta[_tw++]=_ta[_ti]; }
+  _ta.length=_tw;
+}
+
+/* ================= AUTO-BUILD (spectator mazing) ================= */
+function autoBuild(dt){
+  S.autoT-=dt;
+  if(S.autoT>0) return;
+  S.autoT=1.2;
+  if(!S.waveActive && !S.over){ startWave(); return; }
+  // wall off squares adjacent to the current route -> the maze grows itself
+  const order=['pencil','whiteout','clipper','ibu','outlet'];
+  const seen={}, cands=[];
+  for(const step of S.route){
+    const nb=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(let i=0;i<4;i++){
+      const c=step.c+nb[i][0], r=step.r+nb[i][1], k=c+','+r;
+      if(seen[k]) continue; seen[k]=1;
+      if(canPlaceCell(c,r).ok) cands.push({c,r});
+    }
+  }
+  for(const key of order){
+    if(S.money < TOWERS[key].cost+40 || !cands.length) continue;
+    const s=cands[Math.floor(Math.random()*cands.length)];
+    if(placeTowerAt(s.c, s.r, key).ok) break;
+  }
+  if(S.money>500 && S.towers.length){
+    const ups=S.towers.filter(t=>t.lvl<3);
+    if(ups.length && Math.random()<0.4){
+      const t=ups[Math.floor(Math.random()*ups.length)];
+      const c=upCost(t);
+      if(S.money>=c+60){ S.money-=c; t.lvl++; t.st=towerStats(t.key,t.lvl); burst(t.x,t.y,'#c49e35',12); }
+    }
+  }
+}
+
+/* ================= GAME FLOW ================= */
+const EPITAPHS=[
+"Sprint ##: The Hindenburg Had a Better Flight Plan",
+"Operation Scope Creep: Everything Was Priority Zero",
+"Sprint ##: The Technical Debt Collector Arrives",
+"Velocity Trap: 50 Story Points of Pure Bullshit",
+"Code Red, Zero Prod: The Great Merge Apocalypse",
+"Sprint ##: Who the Fuck Approved This Architecture?",
+"Feature Complete, Functionally Brain-Dead",
+"Sprint ##: Deadlines Are Mere Suggestions",
+"The Refactor Fiasco: Breaking Working Code for Zero Profit",
+"Sprint ##: Shipped Straight to Staging Heaven",
+"Blame-Driven Development: The Post-Mortem",
+"The Burndown Chart of Sheer Despair",
+"Sprint ##: Works on My Machine",
+"Hotfix for the Hotfix's Hotfix",
+"Story Point Inflation: Everything Is Now 13 Points",
+"Sprint ##: Deliverables Not Found",
+"The Unplanned Departure of Reason and QA",
+"Legacy Spaghettification: The Final Chapter",
+"Sprint ##: Burning Down the House (and the Pipeline)",
+"Zero Testing, All Prayers",
+];
+function gameOver(){
+  S.over=true;
+  S.placing=null; S.shakeT=0;
+  ['bWave','bSpeed','bAuto','bPause'].forEach(id=>document.getElementById(id).disabled=true);
+  const ov=document.getElementById('overlay');
+  ov.classList.remove('hidden');
+  const epi=EPITAPHS[Math.floor(Math.random()*EPITAPHS.length)].replace(/##/g,S.wave);
+  const art=[
+  '██████╗  ██████╗ ██╗     ██╗     ██████╗  █████╗  ██████╗██╗  ██╗',
+  '██╔══██╗██╔═══██╗██║     ██║     ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝',
+  '██████╔╝██║   ██║██║     ██║     ██████╔╝███████║██║     █████╔╝ ',
+  '██╔══██╗██║   ██║██║     ██║     ██╔══██╗██╔══██║██║     ██╔═██╗ ',
+  '██║  ██║╚██████╔╝███████╗███████╗██████╔╝██║  ██║╚██████╗██║  ██╗',
+  '╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝'
+  ].join('\n');
+  const _d=new Date(), _p=n=>String(n).padStart(2,'0');
+  const T='['+_p(_d.getHours())+':'+_p(_d.getMinutes())+':'+_p(_d.getSeconds())+']';
+  ov.innerHTML = '<div class="termwin">'
+    +'<div class="termbar"><span class="tdot" id="tclose" title="close" style="background:var(--err);cursor:pointer"></span><span class="tdot" style="background:#cc8d00"></span><span class="tdot" style="background:var(--a1)"></span><span class="tpath">root@prod: ~/bugbash</span></div>'
+    +'<pre class="tascii">'+art+'</pre>'
+    +'<p class="tout"><span class="ts">'+T+'</span> <span style="color:var(--muted)">Postmortem:</span>&nbsp;&nbsp;<span style="color:var(--a1)">$</span> deploy --prod / <span style="color:var(--err)"><b>FATAL:</b> uncaught exceptions</span> in <span style="color:var(--a1)">release build</span> \u2014 <span style="color:#cc8d00">regression suite</span> bypassed.</p>'
+    +'<p class="tout" style="white-space:nowrap"><span class="ts">'+T+'</span> '+S.wavesCleared+' sprint cycles completed, <span style="color:var(--a1)">'+S.kills+' bugs squashed</span>, <span style="color:var(--err)">'+S.escaped+' bugs escaped</span>.</p>'
+    +'<p class="tout"><span class="ts">'+T+'</span> '+S.earlyCalls+' sprint'+(S.earlyCalls===1?'':'s')+' called early.</p>'
+    +'<p class="tout"><span class="ts">'+T+'</span> export BUGBASH_PATH="'+S.route.length+'_cells"</p>'
+    +'<p class="tepi"><span class="ts">'+T+'</span> '+epi+'</p>'
+    +'<p class="tout"><span class="ts">'+T+'</span> <span style="color:#cc8d00">BEST</span> \u2014 sprint '+REC.bestWave+' \u00B7 '+REC.mostKills+' squashed \u00B7 '+cleanSprintStr(REC.bestStreak)
+    +((S.newRec.wave||S.newRec.kills||S.newRec.streak)?' <span style="color:var(--a1)"><b>\u2605 NEW RECORD</b></span>':'')+'</p>'
+    +'<button class="termcmd" onclick="location.reload()"><span class="prompt" style="color:var(--a1)">$</span> ./bugbash --retry <span class="cursor">\u2588</span></button>'
+    +'</div>';
+  document.getElementById('tclose').onclick=()=>ov.classList.add('hidden');
+}
+function update(dt){
+  if(S.paused||S.over) return;
+  if(S.shakeT>0) S.shakeT-=dt;
+  if(S.started){ S.gameTime+=dt; S.upT-=dt; if(S.upT<=0){ S.upT=1; S.upHist.push(S.lives/20); if(S.upHist.length>90) S.upHist.shift(); } }
+  if(S.auto) autoBuild(dt);
+  if(S.waveActive && S.spawnQueue.length){
+    S.spawnT-=dt;
+    if(S.spawnT<=0){ const s=S.spawnQueue.shift(); spawnFoe(s.t); S.spawnT=s.gap; }
+  }
+  updateFoes(dt); updateTowers(dt); updateProjs(dt); updateParts(dt); updateDuck(dt);
+  if(S.waveActive && !S.over && !S.spawnQueue.length && !S.foes.length){
+    S.waveActive=false; S.incident=0;
+    S.wavesCleared++;
+    if(!S.leakedWave){ S.cleanStreak++; for(const b of S.bounties){ if(!b.done&&b.kind==='leakless') completeBounty(b); } }
+    else S.cleanStreak=0;
+    if(noteRecord('bestWave',S.wave)) S.newRec.wave=true;
+    if(noteRecord('bestStreak',S.cleanStreak)) S.newRec.streak=true;
+    const bonus=S.wave<=2?3:S.wave<=7?5:8; // poker-scale sprint bonus
+    tlog('Sprint '+S.wave+' cleared +'+bonus+' story points','#cc8d00');
+    S.money+=bonus;
+    S.msg='Sprint '+S.wave+' cleared! +'+bonus+' story points';
+    S.msgT=5;
+    const bw=document.getElementById('bWave');
+    bw.disabled=false;
+    maybeArmAutoStart();
+    refreshWaveButton();
+  }
+  if(S.autoT>0 && !S.waveActive && !S.over){
+    S.autoT-=dt;
+    const bwA=document.getElementById('bWave');
+    if(S.autoT<=0){ S.autoT=0; startWave(); }
+    else refreshWaveButton();
+  }
+  if(S.msgT>0) S.msgT-=dt;
+  if(S.leakT>0) S.leakT-=dt;
+}
+
+/* ================= RENDER ================= */
+function rr(x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function termChrome(b,title){ // terminal-window title bar: traffic lights + title
+  const th=20;
+  ctx.fillStyle=TC.bg; rr(b.x,b.y,b.w,th,6); ctx.fill();
+  ctx.fillRect(b.x,b.y+th-6,b.w,6);
+  ['#cc5656','#cc8d00',TC.a1].forEach((c,i)=>{
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(b.x+11+i*11,b.y+th/2,3.5,0,6.29); ctx.fill(); });
+  ctx.fillStyle=TC.a1; ctx.font='bold 9px monospace'; ctx.textAlign='left';
+  ctx.fillText(title,b.x+42,b.y+13.5);
+  ctx.strokeStyle=ga(0.25); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(b.x,b.y+th); ctx.lineTo(b.x+b.w,b.y+th); ctx.stroke();
+  return th;
+}
+function panelChrome(b,title,bg){ // static frame of a terminal panel: shadow + bg + border + title
+  ctx.fillStyle='rgba(0,0,0,0.45)'; rr(b.x+3,b.y+4,b.w,b.h,6); ctx.fill();
+  ctx.fillStyle=bg; rr(b.x,b.y,b.w,b.h,6); ctx.fill();
+  ctx.strokeStyle=ga(0.4); ctx.lineWidth=1.5; rr(b.x,b.y,b.w,b.h,6); ctx.stroke();
+  termChrome(b,title);
+}
+function panel(b,title,lines,bg,fs){
+  panelChrome(b,title,bg);
+  ctx.font=(fs||9)+'px monospace';
+  lines.forEach((ln,i)=>{ ctx.fillStyle=ln[1]; ctx.fillText(ln[0],b.x+10,b.y+34+i*13); });
+}
+let HELP_RECT={x:0,w:0};
+function drawMenuBar(){ // always on top: called last in render()
+  ctx.fillStyle=TC.bg; ctx.fillRect(0,0,W,26);
+  ctx.fillStyle=TC.a1; ctx.font='12px monospace'; ctx.textAlign='left';
+  const menus=['File','Edit','Selection','View','Go','Run','Terminal','Help'];
+  let _mx=10;
+  menus.forEach(m=>{ const _w=ctx.measureText(m).width; if(m==='Help') HELP_RECT={x:_mx,w:_w}; ctx.fillText(m,_mx,17); _mx+=_w+26; });
+}
+function drawIDEStatic(){
+  // --- Visual Studio dark editor ---
+  ctx.fillStyle=TC.bg; ctx.fillRect(0,0,W,H);
+  // activity bar
+  ctx.fillStyle=TC.bg; ctx.fillRect(0,26,34,H-26);
+  ctx.font='13px sans-serif'; ctx.textAlign='center';
+  const icons=['📄','🔍','⎇','▶','⚙'];
+  icons.forEach((ic,i)=>{ ctx.fillStyle=i===0?TC.body:TC.muted; ctx.fillText(ic,17,58+i*34); });
+  // pseudo code with line numbers
+  const palette=[TC.a1,TC.a1,TC.muted,TC.a3,'#cc8d00',TC.a3];
+  let seed=1234;
+  const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  ctx.font='11px monospace';
+  for(let r=0;r<ROWS;r++){
+    const y=OY+r*CELL;
+    if(y>44){ ctx.fillStyle=TC.muted; ctx.textAlign='right'; ctx.fillText(String(r+1), 46, y+21); }
+    if(y+11<26) continue; // keep code bars clear of the menu bar
+    let x=58, segs=2+Math.floor(rnd()*3);
+    for(let s=0;s<segs && x<W-30;s++){
+      const w=26+rnd()*86;
+      ctx.fillStyle=palette[Math.floor(rnd()*palette.length)];
+      ctx.globalAlpha=0.28; rr(x, y+11, w, 9, 3); ctx.fill(); ctx.globalAlpha=1;
+      x+=w+13;
+    }
+  }
+  // fade the sprint board background so the maze, tools and bugs pop
+  ctx.fillStyle='rgba(0,0,0,0.42)'; ctx.fillRect(0,26,W,H-26-16);
+  // maze grid, clipped clear of the menu bar, activity bar and status bar
+  ctx.save();
+  ctx.beginPath(); ctx.rect(34,26,W-34,H-26-16); ctx.clip();
+  ctx.strokeStyle=ga(0.09); ctx.lineWidth=1;
+  for(let c=0;c<=COLS;c++){ ctx.beginPath(); ctx.moveTo(OX+c*CELL,OY); ctx.lineTo(OX+c*CELL,OY+ROWS*CELL); ctx.stroke(); }
+  for(let r=0;r<=ROWS;r++){ ctx.beginPath(); ctx.moveTo(OX,OY+r*CELL); ctx.lineTo(OX+COLS*CELL,OY+r*CELL); ctx.stroke(); }
+  ctx.restore();
+
+  // --- IDE panels: the maze walls (static chrome; contents drawn per frame) ---
+  panelChrome(DECOR_BLOCKS[0],'TERMINAL',TC.panel);
+  panelChrome(DECOR_BLOCKS[1],'EXPLORER',TC.panel);
+  (function(){ // minimap chrome (no drop shadow, like the original)
+    const b=DECOR_BLOCKS[2];
+    ctx.fillStyle=TC.panel; rr(b.x,b.y,b.w,b.h,6); ctx.fill();
+    ctx.strokeStyle=ga(0.4); ctx.lineWidth=1.5; rr(b.x,b.y,b.w,b.h,6); ctx.stroke();
+    termChrome(b,'MINIMAP');
+  })();
+  panelChrome(DECOR_BLOCKS[3],'PROBLEMS',TC.panel);
+  panelChrome(DECOR_BLOCKS[4],'DEBUG',TC.bg); // contents are live: drawn per-frame in drawIDEDynamic
+  panelChrome(DECOR_BLOCKS[7],'\uD83D\uDEA8 BREACH LOG',TC.panel);
+  (function(){ // build-failed toast chrome (red border drawn dynamic when failed)
+    const b=DECOR_BLOCKS[5];
+    ctx.fillStyle='rgba(0,0,0,0.45)'; rr(b.x+3,b.y+4,b.w,b.h,8); ctx.fill();
+    ctx.fillStyle=TC.panel; rr(b.x,b.y,b.w,b.h,8); ctx.fill();
+    ctx.strokeStyle=ga(0.4); ctx.lineWidth=1.5; rr(b.x,b.y,b.w,b.h,8); ctx.stroke();
+    termChrome(b,'BUILD');
+  })();
+  [DECOR_BLOCKS[6]].forEach((b,bi)=>{ // code tree: hierarchical node graph
+    ctx.fillStyle='rgba(3,7,3,0.6)'; rr(b.x,b.y,b.w,b.h,6); ctx.fill();
+    ctx.strokeStyle=ga(0.4); ctx.lineWidth=1.5; rr(b.x,b.y,b.w,b.h,6); ctx.stroke();
+    termChrome(b,'\\BRANCHES');
+    const cx=b.x+b.w/2, flip=bi===1?-1:1;
+    const pts={
+      root:[cx, b.y+30],
+      l:[cx-30*flip, b.y+54], r:[cx+30*flip, b.y+54],
+      ll:[cx-40*flip, b.y+78], lr:[cx-15*flip, b.y+78],
+      rl:[cx+15*flip, b.y+78], rr:[cx+40*flip, b.y+78],
+      b1:[cx-21*flip, b.y+102], b2:[cx-9*flip, b.y+102],
+      c1:[cx+9*flip, b.y+102], c2:[cx+21*flip, b.y+102],
+      d1:[cx+34*flip, b.y+102], d2:[cx+46*flip, b.y+102],
+      e1:[cx+46*flip, b.y+120], f1:[cx+46*flip, b.y+136],
+    };
+    const edges=[['root','l'],['root','r'],['l','ll'],['l','lr'],['r','rl'],['r','rr'],
+      ['lr','b1'],['lr','b2'],
+      ['rl','c1'],['rl','c2'],['rr','d1'],['rr','d2'],
+      ['d2','e1'],['e1','f1']];
+    ctx.strokeStyle=ga(0.55); ctx.lineWidth=2;
+    edges.forEach(e=>{
+      ctx.beginPath();
+      ctx.moveTo(pts[e[0]][0],pts[e[0]][1]);
+      ctx.lineTo(pts[e[1]][0],pts[e[1]][1]);
+      ctx.stroke();
+    });
+    Object.keys(pts).forEach(k=>{
+      const p=pts[k], isRoot=k==='root';
+      if(isRoot){ ctx.fillStyle=ga(0.25); ctx.beginPath(); ctx.arc(p[0],p[1],9,0,6.29); ctx.fill(); }
+      ctx.fillStyle=isRoot?TC.a1:TC.muted;
+      ctx.beginPath(); ctx.arc(p[0],p[1],isRoot?5:3.5,0,6.29); ctx.fill();
+    });
+  });
+
+  // status bar fill (bug count text drawn dynamic)
+  ctx.fillStyle=TC.panel; ctx.fillRect(0,H-16,W,16);
+}
+function drawIDEDynamic(){
+  (function(){ // terminal flashes red/yellow while the duck is out
+    if(!S.duck) return;
+    const b=DECOR_BLOCKS[0];
+    ctx.strokeStyle=Math.floor(performance.now()/300)%2?'#ff3b30':'#ffd60a';
+    ctx.lineWidth=3; rr(b.x,b.y,b.w,b.h,6); ctx.stroke();
+  })();
+  (function(){ // terminal event log: word-wrapped to the panel width
+    const b=DECOR_BLOCKS[0];
+    const big=!!S.duck; // duck holds the terminal: big announcement type
+    const fs=big?11:7, lh=big?15:10;
+    ctx.font=fs+'px monospace'; ctx.textAlign='left';
+    const cpl=Math.max(12,Math.floor((b.w-20)/Math.max(1,ctx.measureText('M').width)));
+    const wrap=t=>{
+      const out=[]; let s=String(t);
+      while(s.length>cpl){
+        let br=s.lastIndexOf(' ',cpl);
+        if(br<10) br=cpl; // no space nearby: hard break
+        out.push(s.slice(0,br)); s=s.slice(br).replace(/^ +/,'');
+      }
+      out.push(s); return out;
+    };
+    let lines=[];
+    if(!S.termLog.length) lines.push(['> watching for bugs\u2026',TC.muted]);
+    else S.termLog.forEach(e=>wrap(e.t).forEach(t=>lines.push([t,e.c])));
+    const yTop=b.y+(big?42:34), yBot=b.y+b.h-46;
+    const maxLines=Math.max(1,Math.floor((yBot-yTop)/lh)+1);
+    if(lines.length>maxLines) lines=lines.slice(-maxLines);
+    lines.forEach((ln,i)=>{ ctx.fillStyle=ln[1]; ctx.fillText(ln[0],b.x+10,yTop+i*lh); });
+  })();
+  (function(){
+    const b=DECOR_BLOCKS[0], sw=b.w-20, sh=26, sx=b.x+10, sy=b.y+b.h-8-sh;
+    ctx.strokeStyle=ga(0.25); ctx.lineWidth=1;
+    ctx.strokeRect(sx,sy,sw,sh);
+    ctx.fillStyle=TC.muted; ctx.font='7px monospace'; ctx.textAlign='left';
+    ctx.fillText('uptime',sx,sy-3);
+    if(S.upHist.length>1){
+      let mn=Math.min.apply(null,S.upHist), mx=Math.max.apply(null,S.upHist);
+      if(mx-mn<0.02){ mn=Math.max(0,mn-0.01); mx=Math.min(1,mx+0.01); }
+      const pd=(mx-mn)*0.2; mn=Math.max(0,mn-pd); mx=Math.min(1,mx+pd);
+      const py=v=>sy+sh-2-(sh-4)*(Math.max(0,Math.min(1,v))-mn)/(mx-mn);
+      const px=i=>sx+2+(sw-4)*i/89;
+      ctx.beginPath();
+      S.upHist.forEach((v,i)=>{ i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)); });
+      ctx.strokeStyle=TC.a1; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.lineTo(px(S.upHist.length-1),sy+sh-2); ctx.lineTo(px(0),sy+sh-2); ctx.closePath();
+      ctx.fillStyle=ga(0.15); ctx.fill();
+      ctx.fillStyle=TC.muted; ctx.font='7px monospace'; ctx.textAlign='right';
+      ctx.fillText((mx*100).toFixed(1)+'%',sx+sw,sy-3);
+      ctx.textAlign='left';
+    }
+  })();
+  (function(){ // explorer: scroller content only
+    const b=DECOR_BLOCKS[1];
+    const fs=8, lh=11, x0=b.x+10, yTop=b.y+30, yBot=b.y+b.h-8;
+    const total=EXPLORER_LS.length*lh;
+    const off=(performance.now()/1000*14)%total;
+    ctx.save(); ctx.beginPath(); ctx.rect(b.x+4,b.y+22,b.w-8,b.h-26); ctx.clip();
+    ctx.font=fs+'px monospace'; ctx.textAlign='left';
+    for(let r=0;r<2;r++) for(let i=0;i<EXPLORER_LS.length;i++){
+      const y=yTop+r*total+i*lh-off;
+      if(y<yTop-8||y>yBot+8) continue;
+      const k=EXPLORER_LS[i][1];
+      ctx.fillStyle=k==='d'?TC.a1:k==='h'?'#cc5656':TC.body;
+      ctx.fillText(EXPLORER_LS[i][0],x0,y);
+    }
+    ctx.restore();
+  })();
+  (function(){ // problems: content only
+    const b=DECOR_BLOCKS[3];
+    if(probCache.w!==S.wave+1){ probCache.w=S.wave+1; probCache.c={};
+      buildQueue(S.wave+1).forEach(s=>{ probCache.c[s.t]=(probCache.c[s.t]||0)+1; }); }
+    const order=['dust','ant','crumb','race','beetle','gnat','mega'];
+    const types=order.filter(t=>probCache.c[t]);
+    ctx.textAlign='left'; ctx.font='8px monospace'; ctx.fillStyle=TC.muted;
+    ctx.fillText('sprint '+(S.wave+1), b.x+10, b.y+33);
+    ctx.font='9px monospace';
+    types.forEach((t,i)=>{ ctx.fillStyle=FOES[t].color;
+      ctx.fillText(probCache.c[t]+'\u00D7 '+foeCode(t), b.x+10, b.y+48+i*12); });
+  })();
+  (function(){ // breach log: content only
+    const b=DECOR_BLOCKS[7];
+    const bl=S.breaches.slice(0,6).map(b=>['['+b.t+'] \u2716 '+b.bug+' \u2014 '+b.hp+'%', TC.body]);
+    if(!bl.length) bl.push(['no breaches. keep it that way.', TC.muted]);
+    ctx.font='8px monospace'; ctx.textAlign='left';
+    bl.forEach((ln,i)=>{ ctx.fillStyle=ln[1]; ctx.fillText(ln[0],b.x+10,b.y+34+i*13); });
+  })();
+  (function(){ // build-failed toast: red border + text when broken
+    const b=DECOR_BLOCKS[5];
+    if(S.buildFailed){
+      ctx.strokeStyle='#cc2929'; ctx.lineWidth=2; rr(b.x,b.y,b.w,b.h,8); ctx.stroke();
+      ctx.fillStyle='#cc3636'; ctx.font='bold 11px monospace'; ctx.textAlign='left';
+      ctx.fillText('Build Failed', b.x+10, b.y+40);
+      const n=S.breachTotal;
+      ctx.fillStyle=TC.body; ctx.font='9px monospace';
+      ctx.fillText(n+' error'+(n===1?'':'s'), b.x+10, b.y+56);
+    } else { // default: the only sane build strategy, color-coded per word
+      ctx.font='9px monospace'; ctx.textAlign='left';
+      const toks=[['git','#ffd60a'],['reset','#ffffff'],['--hard','#7dd3fc'],['HEAD','#ffffff']];
+      const sp=ctx.measureText(' ').width, maxW=b.w-20, x0=b.x+10;
+      let x=x0, y=b.y+40;
+      toks.forEach(tk=>{
+        const ww=ctx.measureText(tk[0]).width;
+        if(x+ww>x0+maxW&&x>x0){ x=x0; y+=12; } // wrap: whole words only
+        ctx.fillStyle=tk[1]; ctx.fillText(tk[0],x,y);
+        x+=ww+sp;
+      });
+    }
+  })();
+  (function(){ // minimap readout
+    const b=DECOR_BLOCKS[2];
+    ctx.textAlign='left';
+    ctx.fillStyle=TC.muted; ctx.font='9px monospace';
+    ctx.fillText('path:', b.x+10, b.y+40);
+    ctx.fillStyle=TC.a1; ctx.font='bold 14px monospace';
+    ctx.fillText(S.route.length+' cells', b.x+10, b.y+60);
+  })();
+  (function(){ // debug: always shows the current sprint number
+    const b=DECOR_BLOCKS[4];
+    ctx.textAlign='left'; ctx.font='9px monospace';
+    ctx.fillStyle=TC.a1; ctx.fillText('Sprint '+(S.wave||1),b.x+10,b.y+34);
+    ctx.fillStyle='#cc8d00'; ctx.fillText('‖ paused',b.x+10,b.y+47);
+    ctx.fillStyle=TC.a1; ctx.fillText('breakpoint hit',b.x+10,b.y+60);
+  })();
+  // entrance: thin vertical spawn indicator
+  const epy=CELLPY[ENTRANCE.r];
+  const gp=0.5+0.5*Math.sin(performance.now()/1000*3);
+  ctx.fillStyle=ga(0.45+0.3*gp);
+  ctx.fillRect(2,epy-22,5,44);
+  ctx.fillStyle=TC.a3;
+  ctx.fillRect(2,epy-22,5,2); ctx.fillRect(2,epy+20,5,2);
+  ctx.fillStyle=TC.muted; ctx.font='8px monospace'; ctx.textAlign='left';
+  ctx.fillText('JIRA-404',11,epy+3);
+
+  // status bar: live bug count
+  ctx.fillStyle=TC.a1; ctx.font='10px monospace'; ctx.textAlign='left';
+  const nb=S?S.foes.length:0;
+  ctx.fillText('\u2387 main*    \uD83D\uDC1B '+nb+' bugs    \u26A0 12 warnings', 10, H-4);
+  ctx.textAlign='right';
+  ctx.fillText('root@prod:~#', W-10, H-4);
+}
+function drawIDE(){
+  const key=TNAME+'|'+TMODE;
+  if(ideStaticDirty||ideStaticKey!==key){ refreshStaticIDE(); ideStaticDirty=false; ideStaticKey=key; }
+  ctx.drawImage(ideStatic,0,0);
+  drawIDEDynamic();
+}
+
+function drawRelease(){
+  const integ=S?S.lives:20, frac=Math.max(0,integ/20);
+  ctx.save(); ctx.translate(MUG.x,MUG.y);
+  const _l=(a,b)=>Math.round(a+(b-a)*frac); // VS Code blue #0b4f7d -> gray #3f3f3f
+  ctx.font='13px sans-serif';
+  const _tw=ctx.measureText('Merge PR').width, _pad=16;
+  const _bw=_tw+_pad*2, _bx=-_bw/2, _bh=38;
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  rr(_bx+2,-_bh/2+3,_bw,_bh,3); ctx.fill();
+  const _gr=ctx.createLinearGradient(0,-_bh/2,0,_bh/2);
+  _gr.addColorStop(0,'rgb('+_l(75,20)+','+_l(75,120)+','+_l(75,168)+')');
+  _gr.addColorStop(1,'rgb('+_l(63,11)+','+_l(63,79)+','+_l(63,125)+')');
+  ctx.fillStyle=_gr;
+  rr(_bx,-_bh/2,_bw,_bh,3); ctx.fill();
+  ctx.strokeStyle='rgba(140,200,235,'+(0.35*frac+0.1)+')'; ctx.lineWidth=1;
+  rr(_bx+0.5,-_bh/2+0.5,_bw-1,_bh-1,2); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,'+(0.12*frac+0.03)+')';
+  rr(_bx+4,-_bh/2+2,_bw-8,2,1); ctx.fill();
+  ctx.fillStyle='#ffffff'; ctx.textAlign='center';
+  ctx.fillText('Merge PR',0,5);
+  ctx.fillStyle=TC.muted; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('release/v1.'+Math.max(0,Math.floor((S.wave-1)/5))+' \u2192 prod',0,42);
+  ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(-48,50,96,8);
+  ctx.fillStyle=frac>0.5?TC.a1:frac>0.25?'#c49e35':'#cc5656';
+  ctx.fillRect(-48,50,96*frac,8);
+  ctx.fillStyle=TC.body; ctx.font='9px monospace';
+  ctx.fillText('uptime '+(frac*100).toFixed(2)+'%',0,72);
+  if(frac<0.5){
+    ctx.fillStyle=frac>0.25?'#cc8d00':'#cc5656'; ctx.font='bold 10px monospace';
+    ctx.fillText('\u26A0 merge conflicts',0,88);
+  }
+  ctx.restore();
+  return _bw;
+}
+
+const routeCache=document.createElement('canvas'); routeCache.width=W; routeCache.height=H;
+const rctx=routeCache.getContext('2d');
+let routeCacheKey='#';
+function refreshRouteCache(){
+  const keep=ctx; ctx=rctx;
+  rctx.clearRect(0,0,W,H);
+  if(S.route && S.route.length>=2){
+    // git history: branch line with commit nodes
+    ctx.strokeStyle=ga(0.3); ctx.lineWidth=2;
+    ctx.beginPath();
+    S.route.forEach((cell,i)=>{
+      const px=CELLPX[cell.c], py=CELLPY[cell.r];
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+    for(let i=0;i<S.route.length;i++){
+      const px=CELLPX[S.route[i].c], py=CELLPY[S.route[i].r];
+      if(i%6===0 || i===S.route.length-1){
+        ctx.fillStyle=ga(0.22);
+        ctx.beginPath(); ctx.arc(px,py,7,0,6.29); ctx.fill();
+        ctx.fillStyle=ga(0.9);
+        ctx.beginPath(); ctx.arc(px,py,3.5,0,6.29); ctx.fill();
+      } else if(i%2===0){
+        ctx.fillStyle=ga(0.4);
+        ctx.beginPath(); ctx.arc(px,py,1.8,0,6.29); ctx.fill();
+      }
+    }
+  }
+  ctx=keep;
+}
+function drawRoute(){
+  const key=S.mazeVer+'|'+TNAME+'|'+TMODE; // route only changes on place/sell or theme flip
+  if(routeCacheKey!==key){ refreshRouteCache(); routeCacheKey=key; }
+  ctx.drawImage(routeCache,0,0);
+}
+function squiggle(x0,x1,y,amp,waves,color,lw){
+  ctx.strokeStyle=color; ctx.lineWidth=lw||2; ctx.beginPath();
+  ctx.moveTo(x0,y);
+  for(let i=0;i<waves;i++){
+    const x=x0+(x1-x0)*i/waves, nx=x0+(x1-x0)*(i+1)/waves, mx=(x+nx)/2;
+    ctx.quadraticCurveTo(mx, y+(i%2?amp:-amp), nx, y);
+  }
+  ctx.stroke();
+}
+function drawTower(t){
+  const b=TOWERS[t.key];
+  ctx.save(); ctx.translate(t.x,t.y);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0,15,20,7,0,0,6.29); ctx.fill();
+  if(t===S.selected || (S.placing && mouse.in)){
+    const st=t.st||towerStats(t.key,t.lvl);
+    ctx.strokeStyle=ga(0.126); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,0,st.range,0,6.29); ctx.stroke();
+  }
+  const bob=Math.sin(performance.now()/1000*2+t.x)*1.5;
+  if(t.key==='pencil'){ // Linter: lint squiggle under a code line
+    const by=bob*0.3;
+    ctx.fillStyle=TC.panel; rr(-17,-14+by,34,28,4); ctx.fill();
+    ctx.strokeStyle=TC.line; ctx.lineWidth=1; rr(-17,-14+by,34,28,4); ctx.stroke();
+    ctx.fillStyle=ga(0.4);
+    rr(-12,-9+by,24,4,2); ctx.fill();
+    rr(-12,1+by,15,4,2); ctx.fill();
+    squiggle(-12,12,-1+by,2.5,6,'#baaa3e',2);
+    ctx.fillStyle='#baaa3e'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+    ctx.fillText('!',11,10+by);
+  } else if(t.key==='clipper'){ // rm -rf: terminal
+    ctx.fillStyle=TC.panel; rr(-16,-14+bob*0.3,32,28,4); ctx.fill();
+    ctx.strokeStyle=TC.line; ctx.lineWidth=1; rr(-16,-14+bob*0.3,32,28,4); ctx.stroke();
+    ctx.fillStyle=TC.a1; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+    ctx.fillText('$',0,0+bob*0.3);
+    ctx.fillStyle='#c13d3d'; ctx.font='7px monospace';
+    ctx.fillText('rm -rf',0,10+bob*0.3);
+  } else if(t.key==='ibu'){ // Try/Catch: braces
+    ctx.fillStyle=TC.panel2; rr(-16,-15+bob*0.3,32,30,4); ctx.fill();
+    ctx.strokeStyle='#3ea18d'; ctx.lineWidth=1.5; rr(-16,-15+bob*0.3,32,30,4); ctx.stroke();
+    ctx.fillStyle='#3ea18d'; ctx.font='bold 15px monospace'; ctx.textAlign='center';
+    ctx.fillText('{}',0,5+bob*0.3);
+  } else if(t.key==='whiteout'){ // Breakpoint: red dot in a code gutter
+    const by=bob*0.3, pulse=0.5+0.5*Math.sin((t.pulse||0)*4);
+    ctx.fillStyle=TC.panel; rr(-16,-16+by,32,32,4); ctx.fill();
+    ctx.strokeStyle=TC.line; ctx.lineWidth=1; rr(-16,-16+by,32,32,4); ctx.stroke();
+    ctx.fillStyle=TC.panel; ctx.fillRect(-16,-16+by,10,32);
+    ctx.fillStyle=ga(0.4);
+    rr(-3,-11+by,15,4,2); ctx.fill();
+    rr(-3,-3+by,10,4,2); ctx.fill();
+    rr(-3,5+by,17,4,2); ctx.fill();
+    ctx.fillStyle='#c13d3d'; ctx.beginPath(); ctx.arc(-11,0+by,5.5,0,6.29); ctx.fill();
+    ctx.strokeStyle='rgba(241,76,76,'+(0.35+0.35*pulse)+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(-11,0+by,9+pulse*3,0,6.29); ctx.stroke();
+  } else if(t.key==='outlet'){ // Microservices: node graph
+    const tt=performance.now()/1000;
+    ctx.strokeStyle='#3b5984'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-11,9+bob*0.3); ctx.lineTo(0,-9+bob*0.3); ctx.lineTo(11,9+bob*0.3); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle='#3b5984';
+    [[-11,9],[0,-9],[11,9]].forEach(pt=>{ ctx.beginPath(); ctx.arc(pt[0],pt[1]+bob*0.3,6,0,6.29); ctx.fill(); });
+    const px=-11+ (Math.sin(tt*3+t.x)*0.5+0.5)*22;
+    ctx.fillStyle='#7e93b1'; ctx.beginPath(); ctx.arc(px, 9+(px+11)/22*-18+bob*0.3, 2.5, 0, 6.29); ctx.fill();
+  }
+  ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(b.icon,11,-6+bob*0.3); // shop icon, pinned top-right
+  ctx.fillStyle=TC.a1;
+  for(let i=0;i<t.lvl;i++){ ctx.beginPath(); ctx.arc(-8+i*8,22,3,0,6.29); ctx.fill(); }
+  ctx.restore();
+}
+
+function drawFoe(f){
+  const F=FOES[f.type];
+  const wob=Math.sin(f.wob)*2;
+  const slowed=f.slows.length>0;
+  const label=F.code;
+  const fs=f.type==='mega'?12:10;
+  const cw=label.length*fs*0.62+16, ch=fs+12;
+  ctx.save();
+  if(f.flying){
+    ctx.translate(f.x,f.y-14+wob*0.4);
+    const flap=Math.sin(f.wob*3)*0.5;
+    ctx.fillStyle='rgba(158,107,154,0.35)';
+    ctx.save(); ctx.rotate(-0.5-flap); ctx.beginPath(); ctx.ellipse(-11,0,12,5,0,0,6.29); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.rotate(0.5+flap); ctx.beginPath(); ctx.ellipse(11,0,12,5,0,0,6.29); ctx.fill(); ctx.restore();
+    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0,26,11,4,0,0,6.29); ctx.fill();
+  } else {
+    ctx.translate(f.x,f.y+wob*0.4);
+    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0,ch/2+4,cw/2,4.5,0,0,6.29); ctx.fill();
+  }
+  // the error-code chip
+  ctx.fillStyle=TC.panel; rr(-cw/2,-ch/2,cw,ch,5); ctx.fill();
+  ctx.strokeStyle=slowed?'#65a0cc':F.color; ctx.lineWidth=2; rr(-cw/2,-ch/2,cw,ch,5); ctx.stroke();
+  ctx.fillStyle=slowed?'#65a0cc':F.color; ctx.font='bold '+fs+'px monospace'; ctx.textAlign='center';
+  ctx.fillText(label,0,fs*0.38);
+  ctx.restore();
+  if(f.hp<f.maxhp){
+    const w=Math.max(cw,34), frac=Math.max(0,f.hp/f.maxhp);
+    const by=f.flying?f.y-34:f.y-ch/2-10;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(f.x-w/2,by,w,5);
+    ctx.fillStyle=frac>0.5?TC.a1:frac>0.25?'#c49e35':'#cc5656';
+    ctx.fillRect(f.x-w/2,by,w*frac,5);
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(S.shakeT>0){ const sk=S.shakeAmp*(S.shakeT/0.4); ctx.translate((Math.random()*2-1)*sk,(Math.random()*2-1)*sk); }
+  drawIDE(); drawRoute(); drawRelease();
+  // placement ghost: highlight the grid square
+  if(S.placing && mouse.in && !S.over){
+    const cell=cellOf(mouse.x,mouse.y);
+    if(inGrid(cell.c,cell.r)){
+      const chk=canPlaceCell(cell.c,cell.r);
+      const ok=chk.ok && S.money>=TOWERS[S.placing].cost;
+      const px=CELLPX[cell.c], py=CELLPY[cell.r];
+      ctx.fillStyle=ok?ga(0.25):'rgba(204,86,86,0.25)';
+      ctx.fillRect(px-CELL/2,py-CELL/2,CELL,CELL);
+      ctx.strokeStyle=ok?ga(0.252):'rgba(204,86,86,0.252)';
+      ctx.lineWidth=2;
+      ctx.strokeRect(px-CELL/2,py-CELL/2,CELL,CELL);
+      ctx.beginPath(); ctx.arc(px,py,towerStats(S.placing,1).range,0,6.29); ctx.stroke();
+      if(!ok && chk.why && mouse.down!==true){
+        ctx.fillStyle=TC.body; ctx.font='12px sans-serif'; ctx.textAlign='center';
+        ctx.fillText(chk.why, px, py-CELL/2-8);
+      }
+    }
+  }
+  for(const t of S.towers) drawTower(t);
+  for(const f of S.foes) drawFoe(f);
+  drawDuck();
+  for(const p of S.projs){
+    const tgt=p.target;
+    const ang=tgt?Math.atan2(tgt.y-p.y,tgt.x-p.x):0;
+    if(p.key==='pencil'){ // linter: yellow squiggle
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(ang);
+      ctx.strokeStyle='#baaa3e'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(-8,0);
+      for(let i=1;i<=4;i++) ctx.lineTo(-8+i*4,(i%2?-3:3));
+      ctx.stroke(); ctx.restore();
+    } else if(p.key==='clipper'){ // rm -rf: $
+      ctx.fillStyle=TC.body; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+      ctx.fillText('$',p.x,p.y+4);
+    } else if(p.key==='ibu'){ // try/catch: {}
+      ctx.fillStyle='#3ea18d'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+      ctx.fillText('{}',p.x,p.y+4);
+    } else if(p.key==='whiteout'){ // breakpoint: red glob
+      const wob=1+0.18*Math.sin(performance.now()/40+p.x);
+      ctx.fillStyle='#c13d3d';
+      ctx.beginPath(); ctx.arc(p.x,p.y,5*wob,0,6.29); ctx.fill();
+      ctx.fillStyle='rgba(204,204,204,0.75)';
+      ctx.beginPath(); ctx.arc(p.x-1.5,p.y-1.5,2,0,6.29); ctx.fill();
+    } else { // microservices: steel-blue packet
+      ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,4,0,6.29); ctx.fill();
+      ctx.strokeStyle='rgba(204,204,204,0.5)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,4,0,6.29); ctx.stroke();
+    }
+  }
+  for(const p of S.parts){
+    if(p.x1!==undefined){
+      ctx.strokeStyle=p.color; ctx.lineWidth=2.5; ctx.globalAlpha=Math.min(1,p.t*8);
+      ctx.beginPath(); ctx.moveTo(p.x1,p.y1);
+      const mx=(p.x1+p.x2)/2+(Math.random()-0.5)*20, my=(p.y1+p.y2)/2+(Math.random()-0.5)*20;
+      ctx.lineTo(mx,my); ctx.lineTo(p.x2,p.y2); ctx.stroke(); ctx.globalAlpha=1;
+    } else if(p.txt!==undefined){
+      ctx.globalAlpha=Math.min(1,p.t*2)*(p.alpha||1); ctx.fillStyle=p.color;
+      ctx.font=p.fs+'px monospace'; ctx.textAlign='left';
+      ctx.fillText(p.txt,p.x,p.y); ctx.globalAlpha=1;
+    } else {
+      ctx.globalAlpha=Math.min(1,p.t*2); ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+    }
+  }
+  if(S.incident>0){
+    const flash=0.5+0.5*Math.sin(performance.now()/1000*8);
+    ctx.fillStyle='rgba(140,12,12,'+(0.85+0.1*flash)+')';
+    ctx.fillRect(0,26,W,42);
+    ctx.strokeStyle='#cc4444'; ctx.lineWidth=2+flash*2;
+    ctx.strokeRect(1,27,W-2,40);
+    ctx.fillStyle=TC.body; ctx.font='bold 17px monospace'; ctx.textAlign='center';
+    ctx.fillText('\uD83D\uDEA8 INCIDENT #'+S.wave+' \u2014 KERNEL PANIC \u2014 ALL HANDS', W/2, 53);
+  }
+  if(S.leakT>0){
+    const lw=500;
+    ctx.fillStyle='rgba(19,4,4,0.93)'; ctx.fillRect(W/2-lw/2,74,lw,36);
+    ctx.strokeStyle='#cc3636'; ctx.lineWidth=2; ctx.strokeRect(W/2-lw/2,74,lw,36);
+    ctx.fillStyle='#cc7a7a'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+    ctx.fillText(S.leakToast,W/2,97);
+  }
+  if(S.msgT>0){
+    ctx.fillStyle=gba(0.9); ctx.fillRect(W/2-260,18,520,34);
+    ctx.strokeStyle=TC.a1; ctx.lineWidth=1; ctx.strokeRect(W/2-260,18,520,34);
+    ctx.fillStyle=TC.body; ctx.font='14px monospace'; ctx.textAlign='center';
+    ctx.fillText(S.msg, W/2, 40);
+  }
+  drawMenuBar(); // top menu bar stays above defenders, invaders, and toasts
+  ctx.restore();
+}
+
+/* ================= HUD / INPUT ================= */
+const mouse={x:0,y:0,in:false};
+// Build the shop buttons ONCE. Rebuilding them on a timer was swallowing clicks:
+// a click landing mid-rebuild hit a dead element. refreshShop() now only flips
+// classes/disabled in place, so the button under your cursor never gets replaced.
+const shopBtns={};
+function buildShop(){
+  const shop=document.getElementById('shop');
+  shop.innerHTML='';
+  Object.keys(TOWERS).forEach((key,idx)=>{
+    const b=TOWERS[key];
+    const btn=document.createElement('button');
+    btn.className='tbtn';
+    btn.innerHTML='<span class="kbd">'+(idx+1)+'</span><span class="dicon">'+(key==='ibu'?'<b style="color:#3ea18d">'+b.icon+'</b>':b.icon)+'</span><b style="color:'+b.color+'">'+b.name+'</b> <span class="cost">'+b.cost+' SP</span><span class="desc">'+b.desc+'</span>';
+    btn.onclick=()=>{ S.placing=(S.placing===key?null:key); S.selected=null; refreshShop(); refreshSel(); };
+    shop.appendChild(btn);
+    shopBtns[key]=btn;
+  });
+  refreshShop();
+}
+function refreshShop(){
+  for(const key of Object.keys(TOWERS)){
+    const btn=shopBtns[key];
+    if(!btn) continue;
+    btn.classList.toggle('sel', S.placing===key);
+    btn.disabled = !S.started || S.money<TOWERS[key].cost || S.over;
+  }
+}
+function refreshSel(){
+  const el=document.getElementById('selpanel');
+  const t=S.selected;
+  if(!t || !S.towers.includes(t)){ el.innerHTML='<span style="color:#6e624b">Click a dev tool, then a grid square, to deploy it. Click a placed tool to upgrade / sell it.</span>'; return; }
+  const b=TOWERS[t.key], st=towerStats(t.key,t.lvl);
+  let html='<b style="color:'+b.color+'">'+b.name+'</b> <span>Lv '+t.lvl+'</span>';
+  html+='<span>DMG '+Math.round(st.dmg)+' &times; '+st.rate.toFixed(1)+'/s</span><span>RNG '+Math.round(st.range)+'</span>';
+  if(st.slow>0) html+='<span>Slows '+Math.round(st.slow*100)+'% on hit</span>';
+  if(t.lvl<3) html+='<button class="cbtn" id="bUp">Upgrade '+upCost(t)+' story points</button>';
+  else html+='<span style="color:#c49e35">MAX</span>';
+  html+='<button class="cbtn" id="bSell">Sell '+Math.round(invested(t)*0.7)+' story points</button>';
+  el.innerHTML=html;
+  const bu=document.getElementById('bUp');
+  if(bu) bu.onclick=()=>{ if(S.over) return; const c=upCost(t); if(S.money>=c){ S.money-=c; t.lvl++; t.st=towerStats(t.key,t.lvl); burst(t.x,t.y,'#c49e35',12); refreshShop(); refreshSel(); } };
+  document.getElementById('bSell').onclick=()=>{ if(S.over) return; S.money+=pokerNear(invested(t)*0.7); S.towers=S.towers.filter(x=>x!==t); S.mazeVer++; S.selected=null; computeRoute(); computeFlow(); refreshShop(); refreshSel(); };
+}
+function refreshHud(){
+  const upEl=document.getElementById('hLives'), upPct=S.lives/20*100;
+  upEl.textContent=upPct.toFixed(2)+'%';
+  upEl.style.color=upPct<30?'var(--err)':''; // red alert below 30% uptime
+  document.getElementById('hMoney').textContent=S.money;
+  document.getElementById('hFoes').textContent=S.foes.length+S.spawnQueue.length;
+  document.getElementById('hKills').textContent=S.kills;
+}
+const blockTipEl=document.getElementById('blockTip');
+const gameWrapEl=document.getElementById('gamewrap');
+let lastBlockTip=-2;
+function onCanvasMouseMove(e){
+  const r=cv.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)*(W/r.width); mouse.y=(e.clientY-r.top)*(H/r.height); mouse.in=true;
+  const bi=DECOR_BLOCKS.findIndex(d=>mouse.x>d.x&&mouse.x<d.x+d.w&&mouse.y>d.y&&mouse.y<d.y+d.h);
+  if(bi>=0){
+    if(bi!==lastBlockTip){ // rebuild the tooltip DOM only when the hovered block changes
+      const info=BLOCK_INFO[bi], n=blockCells(bi);
+      blockTipEl.innerHTML='<b>'+info.n+'</b><br><span class="bc">blocks '+n+' cell'+(n===1?'':'s')+'</span><br><i>'+info.t+'</i>';
+      lastBlockTip=bi;
+    }
+    blockTipEl.style.display='block';
+    const g=gameWrapEl.getBoundingClientRect();
+    let tx=e.clientX-g.left+16, ty=e.clientY-g.top+18;
+    if(tx+240>g.width) tx=e.clientX-g.left-246;
+    if(ty+90>g.height) ty=e.clientY-g.top-96;
+    blockTipEl.style.left=tx+'px'; blockTipEl.style.top=ty+'px';
+  } else { blockTipEl.style.display='none'; lastBlockTip=-2; }
+}
+let helpClicks=0, helpPaused=false;
+function onHelpClicked(){
+  if(++helpClicks<10) return;
+  helpClicks=0;
+  helpPaused=!S.over && !S.paused;
+  if(helpPaused){ S.paused=true; document.getElementById('bPause').innerHTML='\u25B6'; }
+  document.getElementById('helpOverlay').classList.remove('hidden');
+}
+function closeHelp(){
+  document.getElementById('helpOverlay').classList.add('hidden');
+  if(helpPaused && S.paused){ S.paused=false; document.getElementById('bPause').innerHTML='\u275A\u275A'; }
+  helpPaused=false;
+}
+document.getElementById('helpClose').onclick=closeHelp;
+cv.addEventListener('mousemove',onCanvasMouseMove);
+cv.addEventListener('mouseleave',()=>{ mouse.in=false; blockTipEl.style.display='none'; lastBlockTip=-2; });
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && !document.getElementById('helpOverlay').classList.contains('hidden')){ closeHelp(); return; }
+  if(S.over) return;
+  const keys=Object.keys(TOWERS);
+  if(e.key>='1'&&e.key<=String(keys.length)){
+    const key=keys[+e.key-1], btn=shopBtns[key];
+    if(btn&&!btn.disabled) btn.onclick(); // same toggle as clicking the shop button
+  } else if(e.key==='6'){
+    summonDuck();
+  } else if(e.key==='Escape'){
+    if(S.placing||S.selected){ S.placing=null; S.selected=null; refreshShop(); refreshSel(); }
+  } else if(e.key==='u'||e.key==='U'){
+    const bu=document.getElementById('bUp');
+    if(bu) bu.onclick(); // upgrade is guarded by affordability inside the button handler
+  } else if(e.key==='s'||e.key==='S'){
+    const bs=document.getElementById('bSell');
+    if(bs) bs.onclick(); // sell exists whenever a defender is selected
+  }
+});
+function onCanvasClick(e){
+  const r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(W/r.width), y=(e.clientY-r.top)*(H/r.height);
+  if(y<26){ // menu bar: the menus are decorative, except Help hides an easter egg
+    if(x>=HELP_RECT.x && x<=HELP_RECT.x+HELP_RECT.w) onHelpClicked();
+    else helpClicks=0;
+    return;
+  }
+  if(S.over) return; // building while paused is allowed
+  helpClicks=0;
+  const cell=cellOf(x,y);
+  if(S.placing){
+    const key=S.placing;
+    // clicking a placed defender while armed selects it instead (sell/upgrade),
+    // so you never have to disarm first
+    const existing=inGrid(cell.c,cell.r)?towerAt(cell.c,cell.r):null;
+    if(existing){ S.placing=null; S.selected=existing; refreshShop(); refreshSel(); return; }
+    if(S.money<TOWERS[key].cost){ S.msg='Not enough story points.'; S.msgT=3; return; }
+    const res=placeTowerAt(cell.c, cell.r, key);
+    if(res.ok){ S.placing=null; refreshShop(); refreshSel(); }
+    else { S.msg=res.why||"Can't build there."; S.msgT=3.6; }
+    return;
+  }
+  S.selected = inGrid(cell.c,cell.r) ? (towerAt(cell.c,cell.r)||null) : null;
+  refreshSel();
+}
+cv.addEventListener('click',onCanvasClick);
+(function(){
+  const hb=document.getElementById('bWave');
+  let holdT=null, holdFired=false, downT=0;
+  const cancelHold=()=>{ clearTimeout(holdT); holdT=null; hb.classList.remove('holding'); };
+  hb.addEventListener('pointerdown',e=>{
+    if(hb.disabled) return;
+    holdFired=false; downT=Date.now();
+    hb.classList.add('holding');
+    holdT=setTimeout(()=>{ holdFired=true; hb.classList.remove('holding'); toggleAutoSend(); },600);
+  });
+  hb.addEventListener('pointerup',e=>{
+    cancelHold();
+    if(!holdFired && !hb.disabled && Date.now()-downT<300){ S.waveActive?callEarly():startWave(); }
+    holdFired=false;
+  });
+  hb.addEventListener('pointerleave',()=>{ cancelHold(); holdFired=false; });
+  hb.addEventListener('pointercancel',()=>{ cancelHold(); holdFired=false; });
+  hb.addEventListener('contextmenu',e=>e.preventDefault());
+  hb.addEventListener('click',e=>{ if(e.detail===0 && !hb.disabled){ S.waveActive?callEarly():startWave(); } });
+})();
+function toggleAutoSend(){
+  S.autoSend=!S.autoSend;
+  document.getElementById('bWave').classList.toggle('autoarmed',S.autoSend);
+  if(!S.autoSend && !S.auto) S.autoT=0;
+  maybeArmAutoStart();
+  if(S.started&&!S.over) refreshWaveButton();
+  S.msg='Auto-send '+(S.autoSend?'ON — hold the sprint button again to disarm':'OFF'); S.msgT=4;
+}
+(function(){
+  const bw=document.getElementById('bWave'), tip=document.getElementById('waveTip');
+  const order=['dust','ant','crumb','race','beetle','gnat','mega'];
+  bw.addEventListener('mouseenter',()=>{
+    if(bw.disabled||S.over) return;
+    const w=S.wave+1, counts={};
+    buildQueue(w).forEach(s=>{ counts[s.t]=(counts[s.t]||0)+1; });
+    tip.innerHTML='<b>Sprint '+w+'</b><br>'+order.filter(t=>counts[t]).map(t=>
+      counts[t]+'\u00D7 <span class="foechip" style="border-color:'+FOES[t].color+';color:'+FOES[t].color+'">'+foeCode(t)+'</span>').join('<br>');
+    tip.style.left=bw.offsetLeft+'px';
+    tip.style.top=(bw.offsetTop+bw.offsetHeight+6)+'px';
+    tip.classList.remove('hidden');
+  });
+  bw.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
+})();
+(function(){ // header stat explanations
+  const stip=document.getElementById('statTip');
+  const tips={
+    hLives:'Uptime SLA. Starts at 100% \u2014 each escaped bug costs 5%. Below 50% the Merge PR button shows merge conflicts.',
+    hMoney:'Story points. Earned by squashing bugs \u2014 spend them on dev tools in the shop.',
+    hFoes:'Bugs on the board right now, including ones still queued to spawn.',
+    hKills:'Bugs squashed this run.'
+  };
+  Object.keys(tips).forEach(id=>{
+    const el=document.getElementById(id).parentElement;
+    el.addEventListener('mouseenter',()=>{
+      stip.textContent=tips[id];
+      stip.style.left=el.offsetLeft+'px';
+      stip.style.top=(el.offsetTop+el.offsetHeight+6)+'px';
+      stip.classList.remove('hidden');
+    });
+    el.addEventListener('mouseleave',()=>stip.classList.add('hidden'));
+  });
+})();
+document.getElementById('bSpeed').onclick=e=>{ S.speed=S.speed>=2?1:2; e.target.textContent=S.speed+'x'; };
+document.getElementById('bAuto').onclick=e=>{ S.auto=!S.auto; e.currentTarget.classList.toggle('on',S.auto); if(!S.auto && !S.autoSend) S.autoT=0; maybeArmAutoStart(); };
+document.getElementById('bPause').onclick=e=>{ S.paused=!S.paused; e.target.innerHTML=S.paused?'\u25B6':'\u275A\u275A'; };
+document.getElementById('bRestart').onclick=()=>location.reload();
+document.getElementById('bStart').onclick=()=>{
+  document.getElementById('overlay').classList.add('hidden');
+  S.started=true;
+  ['bWave','bSpeed','bAuto','bPause','bRestart','bMute','bBounty'].forEach(id=>document.getElementById(id).disabled=false);
+document.getElementById('bMute').onclick=e=>{ S.muted=!S.muted; e.target.textContent=S.muted?'\uD83D\uDD07':'\uD83D\uDD0A'; };
+document.getElementById('bBounty').onclick=()=>{ document.getElementById('bountyDrawer').classList.toggle('open'); };
+  refreshShop();
+};
+(function(){ // best-run records on the start overlay
+  const rl=document.getElementById('recLine');
+  rl.textContent=REC.bestWave>0
+    ? 'BEST \u2014 sprint '+REC.bestWave+' \u00B7 '+REC.mostKills+' squashed \u00B7 '+cleanSprintStr(REC.bestStreak)
+    : 'No records yet. Ship something.';
+})();
+
+/* ================= MAIN LOOP ================= */
+BASE_BLOCKED = buildBaseBlocked();
+S=newState();
+computeRoute(); computeFlow();
+buildShop(); refreshSel();
+let last=performance.now(), hudT=0;
+function loop(now){
+  const raw=Math.min(0.1,(now-last)/1000); last=now;
+  update(raw*S.speed);
+  render();
+  hudT+=raw;
+  if(hudT>0.15){ hudT=0; refreshHud(); if(!S.over) refreshShop(); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
